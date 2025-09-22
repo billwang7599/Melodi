@@ -2,6 +2,27 @@
 
 se390
 
+## Backend Setup
+
+1. Navigate to the backend
+   ```bash
+   cd backend
+   ```
+
+2. Install backend dependencies
+   ```bash
+   npm install
+   ```
+
+3. Start the backend development server
+   ```bash
+   npm run dev
+   ```
+
+Backend server will run on `http://localhost:3000` and provide API endpoints for authentication and user management.
+
+
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).

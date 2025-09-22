@@ -3,7 +3,7 @@ import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -37,35 +37,7 @@ export default function HomeScreen() {
     }
   );
   
-  useEffect(() => {
-    const checkTokenValidity = async () => {
-      const accessToken = await AsyncStorage.getItem("token");
-      const expirationDate = await AsyncStorage.getItem("expirationDate");
-
-      if(accessToken && expirationDate){
-        const currentTime = Date.now();
-        if(currentTime >= parseInt(expirationDate)){
-          AsyncStorage.removeItem("token");
-          AsyncStorage.removeItem("expirationDate");
-        } else {
-          router.replace('/dashboard');
-        }
-      }
-    }
-
-    checkTokenValidity();
-  }, []);
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { code } = response.params;
-      exchangeCodeForToken(code);
-    } else if (response?.type === 'error') {
-      Alert.alert('Error', 'Failed to authenticate with Spotify');
-    }
-  }, [response]);
-
-  const exchangeCodeForToken = async (code: string) => {
+  const exchangeCodeForToken = useCallback(async (code: string) => {
     try {
       const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent('exp://localhost:19002/--/spotify-auth-callback')}&code_verifier=${encodeURIComponent(request?.codeVerifier || '')}`;
       
@@ -98,7 +70,35 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Failed to exchange code for token');
       console.error('Token exchange error:', error);
     }
-  };
+  }, [request]);
+
+  useEffect(() => {
+    const checkTokenValidity = async () => {
+      const accessToken = await AsyncStorage.getItem("token");
+      const expirationDate = await AsyncStorage.getItem("expirationDate");
+
+      if(accessToken && expirationDate){
+        const currentTime = Date.now();
+        if(currentTime >= parseInt(expirationDate)){
+          AsyncStorage.removeItem("token");
+          AsyncStorage.removeItem("expirationDate");
+        } else {
+          router.replace('/dashboard');
+        }
+      }
+    }
+
+    checkTokenValidity();
+  }, []);
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      exchangeCodeForToken(code);
+    } else if (response?.type === 'error') {
+      Alert.alert('Error', 'Failed to authenticate with Spotify');
+    }
+  }, [response, exchangeCodeForToken]);
 
   const authenticate = () => {
     if (request) {
@@ -114,15 +114,19 @@ export default function HomeScreen() {
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={require('@/assets/images/banner.png')}
+          style={styles.backgroundImage}
         />
       }>
-      <TouchableOpacity style={styles.spotifyButton} onPress={authenticate}>
-        <Text>Login to Spotify</Text>
-      </TouchableOpacity>
-      
-    </ParallaxScrollView>
+       <TouchableOpacity style={styles.spotifyButton} onPress={authenticate}>
+         <Text style={styles.buttonText}>Login to Spotify</Text>
+       </TouchableOpacity>
+       
+       <TouchableOpacity style={styles.signupButton} onPress={() => router.push('/(auth)/signup')}>
+         <Text style={styles.buttonText}>Sign Up</Text>
+       </TouchableOpacity>
+       
+     </ParallaxScrollView>
   );
 }
 
@@ -136,12 +140,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
+  backgroundImage: {
+    height: '100%',
+    width: '100%',
     position: 'absolute',
+    resizeMode: 'cover',
   },
   spotifyButton: {
     backgroundColor: '#1DB954',
@@ -153,6 +156,22 @@ const styles = StyleSheet.create({
     elevation: 5,
     marginTop: 20,
     marginHorizontal: 20,
+  },
+  signupButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    marginTop: 10,
+    marginHorizontal: 20,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 
 });
