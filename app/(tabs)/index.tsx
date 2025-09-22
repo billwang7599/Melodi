@@ -1,13 +1,114 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as AuthSession from 'expo-auth-session';
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useEffect } from 'react';
+import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+
+WebBrowser.maybeCompleteAuthSession();
+
+const CLIENT_ID = '0f5c814e10af4468988d67d8fc1c99c7'
+const CLIENT_SECRET = 'INSET_CLIENT_SECRET_HEREEE'
 
 export default function HomeScreen() {
+  
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: CLIENT_ID,
+      scopes: [
+        "user-read-email",
+        "user-library-read",
+        "user-read-recently-played",
+        "user-top-read",
+        "playlist-read-private",
+        "playlist-read-collaborative",
+        "playlist-modify-public"
+      ],
+      redirectUri: 'exp://localhost:19002/--/spotify-auth-callback',
+      responseType: AuthSession.ResponseType.Code,
+      codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
+    },
+    {
+      authorizationEndpoint: 'https://accounts.spotify.com/authorize',
+      tokenEndpoint: 'https://accounts.spotify.com/api/token',
+    }
+  );
+  
+  useEffect(() => {
+    const checkTokenValidity = async () => {
+      const accessToken = await AsyncStorage.getItem("token");
+      const expirationDate = await AsyncStorage.getItem("expirationDate");
+
+      if(accessToken && expirationDate){
+        const currentTime = Date.now();
+        if(currentTime >= parseInt(expirationDate)){
+          AsyncStorage.removeItem("token");
+          AsyncStorage.removeItem("expirationDate");
+        } else {
+          router.replace('/dashboard');
+        }
+      }
+    }
+
+    checkTokenValidity();
+  }, []);
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { code } = response.params;
+      exchangeCodeForToken(code);
+    } else if (response?.type === 'error') {
+      Alert.alert('Error', 'Failed to authenticate with Spotify');
+    }
+  }, [response]);
+
+  const exchangeCodeForToken = async (code: string) => {
+    try {
+      const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent('exp://localhost:19002/--/spotify-auth-callback')}&code_verifier=${encodeURIComponent(request?.codeVerifier || '')}`;
+      
+      const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`),
+        },
+        body: body,
+      });
+
+      const tokenData = await tokenResponse.json();
+      
+      if (tokenData.access_token) {
+        const expirationDate = new Date(Date.now() + tokenData.expires_in * 1000).getTime();
+        await AsyncStorage.setItem("token", tokenData.access_token);
+        await AsyncStorage.setItem("expirationDate", expirationDate.toString());
+        
+        Alert.alert('Success!', 'Successfully authenticated with Spotify!', [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/dashboard')
+          }
+        ]);
+      } else {
+        Alert.alert('Error', 'Failed to get access token from Spotify');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to exchange code for token');
+      console.error('Token exchange error:', error);
+    }
+  };
+
+  const authenticate = () => {
+    if (request) {
+      promptAsync();
+    } else {
+      Alert.alert('Error', 'Spotify authentication not configured properly');
+    }
+  };
+
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -17,63 +118,10 @@ export default function HomeScreen() {
           style={styles.reactLogo}
         />
       }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
+      <TouchableOpacity style={styles.spotifyButton} onPress={authenticate}>
+        <Text>Login to Spotify</Text>
+      </TouchableOpacity>
+      
     </ParallaxScrollView>
   );
 }
@@ -95,4 +143,16 @@ const styles = StyleSheet.create({
     left: 0,
     position: 'absolute',
   },
+  spotifyButton: {
+    backgroundColor: '#1DB954',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+
 });
