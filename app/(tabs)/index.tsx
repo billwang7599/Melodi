@@ -13,6 +13,8 @@ WebBrowser.maybeCompleteAuthSession();
 const CLIENT_ID = '0f5c814e10af4468988d67d8fc1c99c7'
 const CLIENT_SECRET = 'INSET_CLIENT_SECRET_HEREEE'
 
+const REDIRECT_URI = 'melodi://spotify-auth-callback';
+
 export default function HomeScreen() {
   
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
@@ -27,7 +29,7 @@ export default function HomeScreen() {
         "playlist-read-collaborative",
         "playlist-modify-public"
       ],
-      redirectUri: 'exp://localhost:19002/--/spotify-auth-callback',
+      redirectUri: REDIRECT_URI,
       responseType: AuthSession.ResponseType.Code,
       codeChallengeMethod: AuthSession.CodeChallengeMethod.S256,
     },
@@ -39,7 +41,7 @@ export default function HomeScreen() {
   
   const exchangeCodeForToken = useCallback(async (code: string) => {
     try {
-      const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent('exp://localhost:19002/--/spotify-auth-callback')}&code_verifier=${encodeURIComponent(request?.codeVerifier || '')}`;
+      const body = `grant_type=authorization_code&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&code_verifier=${encodeURIComponent(request?.codeVerifier || '')}`;
       
       const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
@@ -108,7 +110,6 @@ export default function HomeScreen() {
     }
   };
 
-
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -173,5 +174,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
 });
