@@ -2,15 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
-  FlatList,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 
@@ -20,6 +17,15 @@ type SpotifyAlbum = { images?: SpotifyImage[] };
 type SpotifyTrack = { name?: string; artists?: SpotifyArtist[]; album?: SpotifyAlbum };
 type RecentlyPlayedItem = { played_at: string; track: SpotifyTrack };
 type RecentlyPlayedResponse = { items?: RecentlyPlayedItem[] };
+type SearchTracksResponse = {
+  tracks?: {
+    items?: Array<SpotifyTrack & {
+      id: string;
+      uri?: string;
+    }>;
+  };
+};
+
 
 type UserProfile = {
   id: string;
@@ -49,6 +55,11 @@ export default function DashboardScreen() {
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedResponse | null>(null);
   const [screenLoading, setScreenLoading] = useState(true);
   const [tracksLoading, setTracksLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
+
 
   const authHeaders = useMemo(
     () => async () => {
@@ -108,6 +119,34 @@ export default function DashboardScreen() {
     fetchUserProfile();
   }, [fetchUserProfile]);
 
+  const searchTracks = useCallback(async (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const headers = await authHeaders();
+      if (!headers) return;
+  
+      const url = `https://api.spotify.com/v1/search?type=track&limit=20&q=${encodeURIComponent(trimmed)}`;
+      const res = await fetch(url, { headers });
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        throw new Error(`Search failed. ${msg}`);
+      }
+      const data: SearchTracksResponse = await res.json();
+      setSearchResults(data.tracks?.items ?? []);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Failed to search tracks");
+    } finally {
+      setSearching(false);
+    }
+  }, [authHeaders]);
+  
+
 
   const logout = useCallback(async () => {
     try {
@@ -142,61 +181,19 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.featuresSection}>
-          <TouchableOpacity style={styles.featureButton} onPress={fetchRecentlyPlayedTracks}>
+          <TouchableOpacity
+            style={styles.featureButton}
+            onPress={() => router.push("/recently-played")}
+          >
             <Text style={styles.featureButtonText}>Get Recently Played Tracks</Text>
           </TouchableOpacity>
 
-          {tracksLoading && (
-            <View style={{ paddingVertical: 16 }}>
-              <ActivityIndicator size="small" />
-            </View>
-          )}
-
-          {!!items.length && (
-            <View style={{ width: "100%", maxWidth: 600 }}>
-              <Text style={styles.sectionTitle}>Recently Played</Text>
-
-              <FlatList
-                data={items}
-                keyExtractor={(item) => item.played_at}
-                renderItem={({ item }) => {
-                  const track = item.track;
-                  const imgs = track?.album?.images ?? [];
-                  // Prefer smallest available; fallback to first
-                  const image = imgs.at(-1) ?? imgs[0];
-
-                  return (
-                    <View style={styles.trackRow}>
-                      {image?.url ? (
-                        <Image source={{ uri: image.url }} style={styles.artwork} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.artwork, { backgroundColor: "#eee" }]} />
-                      )}
-
-                      <View style={styles.trackMeta}>
-                        <Text style={styles.trackName} numberOfLines={1}>
-                          {track?.name ?? "Unknown Title"}
-                        </Text>
-                        <Text style={styles.trackArtists} numberOfLines={1}>
-                          {formatArtists(track?.artists)}
-                        </Text>
-                        <Text style={styles.playedAt}>Played at {formatPlayedAt(item.played_at)}</Text>
-                      </View>
-                    </View>
-                  );
-                }}
-                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-                contentContainerStyle={{ paddingBottom: 10 }}
-                scrollEnabled={false}
-              />
-            </View>
-          )}
-
-          {recentlyPlayed && !items.length && (
-            <Text style={{ color: "#666", textAlign: "center", marginTop: 12 }}>
-              No recently played tracks found.
-            </Text>
-          )}
+          <TouchableOpacity
+            style={styles.featureButton}
+            onPress={() => router.push("/search-tracks")}
+          >
+            <Text style={styles.featureButtonText}>Search for a Track</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={logout}>
@@ -277,6 +274,31 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e9ecef",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  searchIcon: {
+    marginRight: 8,
+    fontSize: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#111",
+    paddingVertical: 6,
+  },
+  clearText: {
+    marginLeft: 8,
+    color: "#1DB954",
+    fontWeight: "600",
+  },  
   artwork: { width: 56, height: 56, borderRadius: 8, marginRight: 12 },
   trackMeta: { flex: 1, minWidth: 0 },
   trackName: { fontSize: 16, fontWeight: "600", color: "#111", marginBottom: 2 },
