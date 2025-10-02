@@ -32,21 +32,33 @@ export const register = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Password must contain at least one numerical character' });
         }
 
-        const db = await getDatabase();
+        const supabase = await getDatabase();
         
-        const existingUser = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+        // Check if user already exists
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();
+            
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const result = await db.run(
-            'INSERT INTO users (email, username, password) VALUES (?, ?, ?)',
-            [email, username, hashedPassword]
-        );
-        
-        const newUser = { id: result.lastID, username };
+        // Insert new user
+        const { data: newUser, error } = await supabase
+            .from('users')
+            .insert([
+                { email, username, password: hashedPassword }
+            ])
+            .select()
+            .single();
+            
+        if (error) {
+            throw error;
+        }
 
         const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'your_jwt_secret', {
             expiresIn: '1h',
@@ -66,10 +78,16 @@ export const login = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Please provide email and password' });
         }
 
-        const db = await getDatabase();
+        const supabase = await getDatabase();
         
-        const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
-        if (!user) {
+        // Get user by email
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();
+            
+        if (userError || !user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -90,8 +108,16 @@ export const login = async (req: Request, res: Response) => {
 
 export const getAllUsers = async (req: Request, res: Response) => {
     try {
-        const db = await getDatabase();
-        const allUsers = await db.all('SELECT id, email, username, created_at FROM users');
+        const supabase = await getDatabase();
+        
+        const { data: allUsers, error } = await supabase
+            .from('users')
+            .select('id, email, username, created_at');
+            
+        if (error) {
+            throw error;
+        }
+        
         res.status(200).json(allUsers);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error });

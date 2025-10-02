@@ -28,7 +28,7 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: 'https://504817860d18.ngrok-free.app',
+  BACKEND_URL: 'https://bed1e983ca56.ngrok-free.app',
 };
 
 export const Fonts = Platform.select({

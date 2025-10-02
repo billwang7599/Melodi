@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { API } from '@/constants/theme';
 import { useState } from 'react';
 import { Alert, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
@@ -55,10 +56,11 @@ export default function SignUpScreen() {
         }
 
         try {
-            const response = await fetch('http://172.16.177.169:3000/api/auth/register', {
+            const response = await fetch(`${API.BACKEND_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'ngrok-skip-browser-warning': 'true'
                 },
                 body: JSON.stringify({ email, username, password }),
             });

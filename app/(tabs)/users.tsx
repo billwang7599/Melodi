@@ -26,7 +26,11 @@ export default function UsersScreen() {
         console.log(
           `Fetching users from: ${API.BACKEND_URL}/api/auth/users`
         );
-        const response = await fetch(`${API.BACKEND_URL}/api/auth/users`);
+        const response = await fetch(`${API.BACKEND_URL}/api/auth/users`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
         console.log("Response status:", response.status);
         const data = await response.json();
         console.log("Response data:", data);
