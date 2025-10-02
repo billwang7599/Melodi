@@ -14,7 +14,11 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 WebBrowser.maybeCompleteAuthSession();
 
 const CLIENT_ID = "0f5c814e10af4468988d67d8fc1c99c7";
-const CLIENT_SECRET = "50f0ef102586407bb1b713b738d57943";
+const CLIENT_SECRET = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET ?? "";
+
+if (!CLIENT_SECRET) {
+  console.warn("Missing EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET environment variable");
+}
 
 const REDIRECT_URI = "melodi://spotify-auth-callback";
 
@@ -145,7 +149,10 @@ export default function HomeScreen() {
       }
     >
       <TouchableOpacity
-        style={[styles.callToAction, { backgroundColor: primaryColor, shadowColor }]}
+        style={[
+          styles.callToAction,
+          { backgroundColor: primaryColor, shadowColor },
+        ]}
         onPress={authenticate}
       >
         <ThemedText
