@@ -1,38 +1,29 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import path from 'path';
-import { Database, open } from 'sqlite';
-import sqlite3 from 'sqlite3';
 
 dotenv.config();
 
-let db: Database | null = null;
+let supabase: SupabaseClient | null = null;
 
 export const initializeDatabase = async () => {
-    if (!db) {
-        db = await open({
-            filename: path.join(__dirname, '..', 'database.sqlite'),
-            driver: sqlite3.Database
-        });
+    if (!supabase) {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
         
-        // Create users table if it doesn't exist
-        await db.exec(`
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                username TEXT NOT NULL,
-                password TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        if (!supabaseUrl || !supabaseKey) {
+            throw new Error('Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_ANON_KEY');
+        }
         
-        console.log('Database initialized successfully');
+        supabase = createClient(supabaseUrl, supabaseKey);
+        
+        console.log('Supabase client initialized successfully');
     }
-    return db;
+    return supabase;
 };
 
 export const getDatabase = async () => {
-    if (!db) {
+    if (!supabase) {
         await initializeDatabase();
     }
-    return db!;
+    return supabase!;
 };

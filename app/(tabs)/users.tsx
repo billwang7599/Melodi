@@ -2,6 +2,7 @@ import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { API } from "@/constants/theme";
 import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 
@@ -23,9 +24,13 @@ export default function UsersScreen() {
         setLoading(true);
         setError(null);
         console.log(
-          "Fetching users from: http://172.16.177.169:3000/api/auth/users"
+          `Fetching users from: ${API.BACKEND_URL}/api/auth/users`
         );
-        const response = await fetch("http://localhost:3000/api/auth/users");
+        const response = await fetch(`${API.BACKEND_URL}/api/auth/users`, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
         console.log("Response status:", response.status);
         const data = await response.json();
         console.log("Response data:", data);
