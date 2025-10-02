@@ -4,18 +4,25 @@ import { Image } from "expo-image";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect } from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Alert, StyleSheet, TouchableOpacity } from "react-native";
 
 import ParallaxScrollView from "@/components/parallax-scroll-view";
+import { ThemedText } from "@/components/themed-text";
+import { Colors } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const CLIENT_ID = "0f5c814e10af4468988d67d8fc1c99c7";
-const CLIENT_SECRET = "INSET_CLIENT_SECRET_HEREEE";
+const CLIENT_SECRET = "50f0ef102586407bb1b713b738d57943";
 
 const REDIRECT_URI = "melodi://spotify-auth-callback";
 
 export default function HomeScreen() {
+  const primaryColor = useThemeColor({}, "primary");
+  const secondaryColor = useThemeColor({}, "secondary");
+  const shadowColor = useThemeColor({}, "shadow");
+
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: CLIENT_ID,
@@ -126,7 +133,10 @@ export default function HomeScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
+      headerBackgroundColor={{
+        light: Colors.light.primaryMuted,
+        dark: Colors.dark.primaryMuted,
+      }}
       headerImage={
         <Image
           source={require("@/assets/images/banner.png")}
@@ -134,15 +144,34 @@ export default function HomeScreen() {
         />
       }
     >
-      <TouchableOpacity style={styles.spotifyButton} onPress={authenticate}>
-        <Text style={styles.buttonText}>Login to Spotify</Text>
+      <TouchableOpacity
+        style={[styles.callToAction, { backgroundColor: primaryColor, shadowColor }]}
+        onPress={authenticate}
+      >
+        <ThemedText
+          style={styles.buttonLabel}
+          lightColor="#FFFFFF"
+          darkColor="#0F0B20"
+        >
+          Login to Spotify
+        </ThemedText>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.signupButton}
+        style={[
+          styles.callToAction,
+          styles.secondaryButton,
+          { backgroundColor: secondaryColor, shadowColor },
+        ]}
         onPress={() => router.push("/(auth)/signup")}
       >
-        <Text style={styles.buttonText}>Sign Up</Text>
+        <ThemedText
+          style={styles.buttonLabel}
+          lightColor="#0F0B20"
+          darkColor="#0F0B20"
+        >
+          Sign Up
+        </ThemedText>
       </TouchableOpacity>
     </ParallaxScrollView>
   );
@@ -164,31 +193,28 @@ const styles = StyleSheet.create({
     position: "absolute",
     resizeMode: "cover",
   },
-  spotifyButton: {
-    backgroundColor: "#1DB954",
+  callToAction: {
     paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
+    paddingVertical: 18,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 5,
-    marginTop: 20,
-    marginHorizontal: 20,
+    elevation: 6,
+    marginHorizontal: 24,
+    marginTop: 28,
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
   },
-  signupButton: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 5,
-    marginTop: 10,
-    marginHorizontal: 20,
+  secondaryButton: {
+    marginTop: 16,
   },
-  buttonText: {
-    color: "white",
+  buttonLabel: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });

@@ -1,7 +1,9 @@
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useState } from 'react';
 import { Alert, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function SignUpScreen() {
     const [email, setEmail] = useState('');
@@ -12,6 +14,14 @@ export default function SignUpScreen() {
         username: '',
         password: ''
     });
+    const primaryColor = useThemeColor({}, 'primary');
+    const surfaceColor = useThemeColor({}, 'surface');
+    const inputBackground = useThemeColor({}, 'inputBackground');
+    const inputBorder = useThemeColor({}, 'inputBorder');
+    const textColor = useThemeColor({}, 'text');
+    const mutedColor = useThemeColor({}, 'textMuted');
+    const dangerColor = useThemeColor({}, 'danger');
+    const shadowColor = useThemeColor({}, 'shadow');
 
     const clearError = (field: string) => {
         if (errors[field as keyof typeof errors]) {
@@ -72,53 +82,102 @@ export default function SignUpScreen() {
             }
         } catch (error) {
             Alert.alert('Error', 'Something went wrong');
+            console.error('Sign up failed', error);
         }
     };
 
     return (
         <ThemedView style={styles.container}>
-            <ThemedText type="title" style={styles.title}>
-                Sign Up
-            </ThemedText>
-            <TextInput
-                style={[styles.input, errors.email ? styles.inputError : null]}
-                placeholder="Email"
-                value={email}
-                onChangeText={(text) => {
-                    setEmail(text);
-                    clearError('email');
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-            />
-            {errors.email ? <ThemedText style={styles.errorText}>{errors.email}</ThemedText> : null}
-            
-            <TextInput
-                style={[styles.input, errors.username ? styles.inputError : null]}
-                placeholder="Username"
-                value={username}
-                onChangeText={(text) => {
-                    setUsername(text);
-                    clearError('username');
-                }}
-                autoCapitalize="none"
-            />
-            {errors.username ? <ThemedText style={styles.errorText}>{errors.username}</ThemedText> : null}
-            
-            <TextInput
-                style={[styles.input, errors.password ? styles.inputError : null]}
-                placeholder="Password"
-                value={password}
-                onChangeText={(text) => {
-                    setPassword(text);
-                    clearError('password');
-                }}
-                secureTextEntry
-            />
-            {errors.password ? <ThemedText style={styles.errorText}>{errors.password}</ThemedText> : null}
-            <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-                <ThemedText style={styles.buttonText}>Sign Up</ThemedText>
-            </TouchableOpacity>
+            <ThemedView
+                variant="surface"
+                style={[styles.card, { backgroundColor: surfaceColor, shadowColor }]}
+            >
+                <ThemedText type="title" style={styles.title}>
+                    Sign Up
+                </ThemedText>
+                <TextInput
+                    style={[
+                        styles.input,
+                        {
+                            backgroundColor: inputBackground,
+                            borderColor: errors.email ? dangerColor : inputBorder,
+                            color: textColor,
+                        },
+                    ]}
+                    placeholder="Email"
+                    placeholderTextColor={mutedColor}
+                    value={email}
+                    onChangeText={(text) => {
+                        setEmail(text);
+                        clearError('email');
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                />
+                {errors.email ? (
+                    <ThemedText style={[styles.errorText, { color: dangerColor }]}>
+                        {errors.email}
+                    </ThemedText>
+                ) : null}
+
+                <TextInput
+                    style={[
+                        styles.input,
+                        {
+                            backgroundColor: inputBackground,
+                            borderColor: errors.username ? dangerColor : inputBorder,
+                            color: textColor,
+                        },
+                    ]}
+                    placeholder="Username"
+                    placeholderTextColor={mutedColor}
+                    value={username}
+                    onChangeText={(text) => {
+                        setUsername(text);
+                        clearError('username');
+                    }}
+                    autoCapitalize="none"
+                />
+                {errors.username ? (
+                    <ThemedText style={[styles.errorText, { color: dangerColor }]}>
+                        {errors.username}
+                    </ThemedText>
+                ) : null}
+
+                <TextInput
+                    style={[
+                        styles.input,
+                        {
+                            backgroundColor: inputBackground,
+                            borderColor: errors.password ? dangerColor : inputBorder,
+                            color: textColor,
+                        },
+                    ]}
+                    placeholder="Password"
+                    placeholderTextColor={mutedColor}
+                    value={password}
+                    onChangeText={(text) => {
+                        setPassword(text);
+                        clearError('password');
+                    }}
+                    secureTextEntry
+                />
+                {errors.password ? (
+                    <ThemedText style={[styles.errorText, { color: dangerColor }]}>
+                        {errors.password}
+                    </ThemedText>
+                ) : null}
+                <TouchableOpacity
+                    style={[styles.signUpButton, { backgroundColor: primaryColor, shadowColor }]}
+                    onPress={handleSignUp}>
+                    <ThemedText
+                        style={styles.buttonText}
+                        lightColor="#FFFFFF"
+                        darkColor="#0F0B20">
+                        Sign Up
+                    </ThemedText>
+                </TouchableOpacity>
+            </ThemedView>
         </ThemedView>
     );
 }
@@ -127,51 +186,44 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
-        padding: 16,
-        paddingBottom: 60,
+        padding: 24,
+    },
+    card: {
+        borderRadius: 24,
+        padding: 24,
+        gap: 16,
+        elevation: 6,
+        width: '100%',
+        maxWidth: 420,
+        alignSelf: 'center',
+        shadowOffset: {
+            width: 0,
+            height: 12,
+        },
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
     },
     title: {
-        marginBottom: 24,
+        marginBottom: 8,
     },
     input: {
         height: 50,
-        borderColor: 'gray',
         borderWidth: 1,
-        borderRadius: 15,
-        marginBottom: 8,
+        borderRadius: 16,
         paddingHorizontal: 16,
-        color: 'black',
-        backgroundColor: 'white',
-    },
-    inputError: {
-        borderColor: '#FF6B6B',
-        borderWidth: 2,
+        fontSize: 16,
     },
     errorText: {
-        color: '#FF6B6B',
         fontSize: 12,
-        marginBottom: 12,
-        marginLeft: 4,
+        fontWeight: '500',
     },
     signUpButton: {
-        backgroundColor: '#007AFF',
         paddingVertical: 16,
-        paddingHorizontal: 32,
-        borderRadius: 15,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 20,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
     },
     buttonText: {
-        color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
     },
