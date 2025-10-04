@@ -76,7 +76,7 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: "https://4894a16b7825.ngrok-free.app",
+  BACKEND_URL: "https://3346c3c3ffad.ngrok-free.app",
 };
 
 export const SUPABASE = {
