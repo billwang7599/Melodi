@@ -21,7 +21,41 @@ se390
 
 Backend server will run on `http://localhost:3000` and provide API endpoints for authentication and user management.
 
+## Supabase Authentication Setup
 
+This app uses Supabase for authentication. Follow these steps to configure it:
+
+### 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com)
+2. Sign up/in and create a new project
+3. Wait for the project to be fully provisioned
+
+### 2. Get Your Supabase Credentials
+
+1. In your Supabase project dashboard, go to **Settings > API**
+2. Copy your **Project URL** and **anon/public key**
+
+### 3. Configure Environment Variables
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file and replace the placeholder values with your actual Supabase credentials:
+   ```env
+   EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   ```
+
+### 4. Enable Email Authentication
+
+1. In your Supabase dashboard, go to **Authentication > Settings**
+2. Make sure **Enable email confirmations** is turned ON for production
+3. For development, you can turn it OFF to skip email verification
+
+The app will automatically validate your Supabase configuration when you start it. Check the console for any configuration errors.
 
 # Welcome to your Expo app 👋
 

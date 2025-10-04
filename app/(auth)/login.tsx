@@ -1,23 +1,21 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/contexts/AuthContext";
-import { validateEmail, validatePassword, validateUsername } from "@/lib/auth";
+import { validateEmail } from "@/lib/auth";
 import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity } from "react-native";
 
-export default function SignUpScreen() {
+export default function LoginScreen() {
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({
     email: "",
-    username: "",
     password: "",
   });
 
-  const { signUp, signInWithSpotify } = useAuth();
+  const { signIn, signInWithSpotify } = useAuth();
 
   const clearError = (field: string) => {
     if (errors[field as keyof typeof errors]) {
@@ -26,7 +24,7 @@ export default function SignUpScreen() {
   };
 
   const validateInput = () => {
-    const newErrors = { email: "", username: "", password: "" };
+    const newErrors = { email: "", password: "" };
     let isValid = true;
 
     // Email validation
@@ -35,17 +33,9 @@ export default function SignUpScreen() {
       isValid = false;
     }
 
-    // Username validation
-    const usernameValidation = validateUsername(username);
-    if (!usernameValidation.isValid) {
-      newErrors.username = usernameValidation.message || "";
-      isValid = false;
-    }
-
     // Password validation
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.isValid) {
-      newErrors.password = passwordValidation.message || "";
+    if (!password) {
+      newErrors.password = "Password is required";
       isValid = false;
     }
 
@@ -53,28 +43,19 @@ export default function SignUpScreen() {
     return isValid;
   };
 
-  const handleSignUp = async () => {
+  const handleSignIn = async () => {
     if (!validateInput()) {
       return;
     }
 
     setLoading(true);
     try {
-      const result = await signUp(email, password, username);
+      const result = await signIn(email, password);
       
       if (result.success) {
-        Alert.alert(
-          "Success", 
-          "Please check your email to verify your account!",
-          [
-            {
-              text: "OK",
-              onPress: () => router.push("/"),
-            },
-          ]
-        );
+        router.replace("/(tabs)");
       } else {
-        Alert.alert("Error", result.error || "Something went wrong");
+        Alert.alert("Error", result.error || "Invalid credentials");
       }
     } catch (error) {
       Alert.alert("Error", "Something went wrong");
@@ -102,8 +83,9 @@ export default function SignUpScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Sign Up
+        Welcome Back
       </ThemedText>
+      
       <TextInput
         style={[styles.input, errors.email ? styles.inputError : null]}
         placeholder="Email"
@@ -120,20 +102,6 @@ export default function SignUpScreen() {
       ) : null}
 
       <TextInput
-        style={[styles.input, errors.username ? styles.inputError : null]}
-        placeholder="Username"
-        value={username}
-        onChangeText={(text) => {
-          setUsername(text);
-          clearError("username");
-        }}
-        autoCapitalize="none"
-      />
-      {errors.username ? (
-        <ThemedText style={styles.errorText}>{errors.username}</ThemedText>
-      ) : null}
-
-      <TextInput
         style={[styles.input, errors.password ? styles.inputError : null]}
         placeholder="Password"
         value={password}
@@ -146,13 +114,14 @@ export default function SignUpScreen() {
       {errors.password ? (
         <ThemedText style={styles.errorText}>{errors.password}</ThemedText>
       ) : null}
+
       <TouchableOpacity 
-        style={[styles.signUpButton, loading && styles.buttonDisabled]} 
-        onPress={handleSignUp}
+        style={[styles.signInButton, loading && styles.buttonDisabled]} 
+        onPress={handleSignIn}
         disabled={loading}
       >
         <ThemedText style={styles.buttonText}>
-          {loading ? "Signing Up..." : "Sign Up"}
+          {loading ? "Signing In..." : "Sign In"}
         </ThemedText>
       </TouchableOpacity>
 
@@ -173,10 +142,10 @@ export default function SignUpScreen() {
       </TouchableOpacity>
 
       <ThemedView style={styles.linkContainer}>
-        <ThemedText style={styles.linkText}>Already have an account? </ThemedText>
-        <Link href="/(auth)/login" asChild>
+        <ThemedText style={styles.linkText}>Don't have an account? </ThemedText>
+        <Link href="/(auth)/signup" asChild>
           <TouchableOpacity>
-            <ThemedText style={styles.link}>Sign In</ThemedText>
+            <ThemedText style={styles.link}>Sign Up</ThemedText>
           </TouchableOpacity>
         </Link>
       </ThemedView>
@@ -193,6 +162,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 24,
+    textAlign: "center",
   },
   input: {
     height: 50,
@@ -214,7 +184,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 4,
   },
-  signUpButton: {
+  signInButton: {
     backgroundColor: "#007AFF",
     paddingVertical: 16,
     paddingHorizontal: 32,

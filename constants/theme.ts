@@ -76,7 +76,12 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: "https://76fe96154173.ngrok-free.app",
+  BACKEND_URL: "https://4894a16b7825.ngrok-free.app",
+};
+
+export const SUPABASE = {
+  URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
+  ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
 };
 
 export const Fonts = Platform.select({

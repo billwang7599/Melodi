@@ -6,9 +6,11 @@ import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useEffect } from "react";
 import { Alert, StyleSheet, TouchableOpacity } from "react-native";
 
+import LogoutButton from "@/components/logout-button";
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { Colors } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -26,6 +28,7 @@ export default function HomeScreen() {
   const primaryColor = useThemeColor({}, "primary");
   const secondaryColor = useThemeColor({}, "secondary");
   const shadowColor = useThemeColor({}, "shadow");
+  const { user } = useAuth();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -164,22 +167,21 @@ export default function HomeScreen() {
         </ThemedText>
       </TouchableOpacity>
 
-      <TouchableOpacity
+      <LogoutButton
         style={[
           styles.callToAction,
           styles.secondaryButton,
-          { backgroundColor: secondaryColor, shadowColor },
+          { backgroundColor: secondaryColor, shadowColor }
         ]}
-        onPress={() => router.push("/(auth)/signup")}
-      >
-        <ThemedText
-          style={styles.buttonLabel}
-          lightColor="#0F0B20"
-          darkColor="#0F0B20"
-        >
-          Sign Up
-        </ThemedText>
-      </TouchableOpacity>
+        textStyle={{
+          ...styles.buttonLabel,
+          color: "#0F0B20"
+        }}
+        showUserEmail={true}
+        onLogoutStart={() => console.log('Logout started')}
+        onLogoutComplete={() => console.log('Logout completed')}
+        onLogoutError={(error) => console.error('Logout error:', error)}
+      />
     </ParallaxScrollView>
   );
 }
