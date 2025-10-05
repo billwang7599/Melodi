@@ -42,33 +42,21 @@ export function LogoutButton({
     return "Logout";
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      confirmTitle,
-      confirmMessage,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: async () => {
-            setLoggingOut(true);
-            onLogoutStart?.();
+  const handleLogout = async() => {
+
+    setLoggingOut(true);
+    onLogoutStart?.();
             
-            try {
-              await signOut();
-              onLogoutComplete?.();
-            } catch (error) {
-              console.error('Logout failed:', error);
-              Alert.alert("Error", "Failed to logout. Please try again.");
-              onLogoutError?.(error);
-            } finally {
-              setLoggingOut(false);
-            }
-          }
-        },
-      ]
-    );
+    try {
+      await signOut();
+      onLogoutComplete?.();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Alert.alert("Error", "Failed to logout. Please try again.");
+      onLogoutError?.(error);
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
