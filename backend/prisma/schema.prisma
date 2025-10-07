@@ -1,0 +1,107 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------ //
+//                       MODELS                     //
+// ------------------------------------------------ //
+
+model User {
+  id               String         @id @default(uuid())
+  username         String         @unique
+  email            String?        @unique
+  displayName      String?        @map("display_name")
+  spotifyId        String?        @map("spotify_id")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  posts            Post[]
+  likes            Like[]
+  friendsSent      Friend[]       @relation("UserOne")
+  friendsReceived  Friend[]       @relation("UserTwo")
+  friendsActioned  Friend[]       @relation("ActionUser")
+
+  @@map("users")
+}
+
+model Friend {
+  userOneId     String
+  userTwoId     String
+  actionUserId  String
+  status        FriendshipStatus @default(pending)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  userOne       User @relation("UserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwo       User @relation("UserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+  actionUser    User @relation("ActionUser", fields: [actionUserId], references: [id], onDelete: Cascade)
+
+  @@id([userOneId, userTwoId])
+  @@map("friends")
+}
+
+model Post {
+  postId      Int            @id @default(autoincrement()) @map("post_id")
+  userId      String
+  content     String
+  topSongId   BigInt
+  likeCount   Int            @default(0) @map("like_count")
+  visibility  PostVisibility @default(public)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topSong     Song             @relation(fields: [topSongId], references: [songId])
+  likes       Like[]
+
+  @@map("posts")
+}
+
+model Song {
+  songId      BigInt   @id @default(autoincrement()) @map("song_id")
+  spotifyId   String   @unique @map("spotify_id")
+  songName    String   @map("song_name")
+  artistName  String   @map("artist_name")
+  albumName   String?  @map("album_name")
+  coverArtUrl String?  @map("cover_art_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  posts          Post[]
+
+  @@map("songs")
+}
+
+model Like {
+  userId    String
+  postId    Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@map("likes")
+}
+
+// ------------------------------------------------ //
+//                        ENUMS                     //
+// ------------------------------------------------ //
+
+enum FriendshipStatus {
+  pending
+  accepted
+  blocked
+}
+
+enum PostVisibility {
+  public
+  friends_only
+  private
+}
