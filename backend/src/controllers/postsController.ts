@@ -35,9 +35,9 @@ export const createPost = async (req: Request, res: Response) => {
             .from('posts')
             .insert([
                 {
-                    userId: userId,
+                    user_id: userId,
                     content,
-                    topSongId: song.song_id,
+                    top_song_id: song.song_id,
                     visibility,
                     like_count: 0,
                     created_at: new Date().toISOString(),
@@ -46,19 +46,19 @@ export const createPost = async (req: Request, res: Response) => {
             ])
             .select(`
                 post_id,
-                userId,
+                user_id,
                 content,
-                topSongId,
+                top_song_id,
                 like_count,
                 visibility,
                 created_at,
                 updated_at,
-                users:userId (
+                users:user_id (
                     id,
                     username,
                     display_name
                 ),
-                songs:topSongId (
+                songs:top_song_id (
                     song_id,
                     spotify_id,
                     song_name,
