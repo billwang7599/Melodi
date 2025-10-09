@@ -48,7 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((event, session) => {
+    } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session ? 'with session' : 'no session');
       
       setSession(session);
@@ -56,8 +56,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setLoading(false);
       
       // Navigate based on auth state
-      if (event === 'SIGNED_IN' && session) {
-        console.log('User signed in, navigating to main app');
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('User signed in, syncing to backend and navigating to main app');
+        
+        // Sync user to backend
+        try {
+          const syncResult = await authService.syncUserToBackend(session.user);
+          if (syncResult.success) {
+            console.log('User successfully synced to backend');
+          } else {
+            console.warn('Failed to sync user to backend:', syncResult.error);
+          }
+        } catch (error) {
+          console.error('Error syncing user to backend:', error);
+        }
+        
         // Small delay to ensure state is updated
         setTimeout(() => {
           router.replace('/(tabs)');
@@ -111,6 +124,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) {
         return { success: false, error: error.message };
       }
+
+      // Note: User sync will happen automatically via the auth state change listener
+      // when the user is signed in after email confirmation
 
       return { success: true };
     } catch (error) {

@@ -57,6 +57,68 @@ export const authService = {
       console.error('Failed to clear app data:', error);
     }
   },
+
+  // Sync user data to backend after authentication
+  syncUserToBackend: async (user: any) => {
+    try {
+      const { API } = require('@/constants/theme');
+      
+      // Extract user data for syncing
+      const userData = {
+        userId: user.id,
+        email: user.email || null,
+        username: user.user_metadata?.username || user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`,
+        displayName: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        spotifyId: user.user_metadata?.provider_id || null
+      };
+
+      console.log('Syncing user to backend:', userData);
+
+      const response = await fetch(`${API.BACKEND_URL}/api/auth/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('User sync result:', result);
+      
+      return { success: true, user: result.user };
+    } catch (error) {
+      console.error('Failed to sync user to backend:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
+
+  // Get user profile from backend
+  getUserProfileFromBackend: async (userId: string) => {
+    try {
+      const { API } = require('@/constants/theme');
+
+      const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return { success: true, user: result.user };
+    } catch (error) {
+      console.error('Failed to get user profile from backend:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  },
 };
 
 // Email validation helper

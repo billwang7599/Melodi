@@ -1,57 +1,45 @@
-import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { getDatabase } from '../db';
 
-export const register = async (req: Request, res: Response) => {
+// Sync user from Supabase Auth to custom users table
+export const syncUser = async (req: Request, res: Response) => {
     try {
-        const { email, password, username } = req.body;
+        const { userId, email, username, displayName, spotifyId } = req.body;
 
-        if (!email || !password || !username) {
-            return res.status(400).json({ message: 'Please provide email, password, and username' });
-        }
-
-        // Email validation: must contain @ and then .
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({ message: 'Email must be in the format: example@domain.com' });
-        }
-
-        // Username validation: 3-16 characters
-        if (username.length < 3 || username.length > 16) {
-            return res.status(400).json({ message: 'Username must be between 3 and 16 characters long' });
-        }
-
-        // Password validation: must be at least 8 characters and contain at least one number
-        if (password.length < 8) {
-            return res.status(400).json({ message: 'Password must be at least 8 characters long' });
-        }
-        
-        const hasNumber = /\d/.test(password);
-        if (!hasNumber) {
-            return res.status(400).json({ message: 'Password must contain at least one numerical character' });
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
         }
 
         const supabase = await getDatabase();
+
+        const { data, error: testError } = await supabase.from('users').select('*').limit(1)
+        console.log('Test select result:', data, testError)
         
-        // Check if user already exists
+        // Check if user already exists in our custom table
         const { data: existingUser } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email)
+            .eq('id', userId)
             .single();
             
         if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(200).json({ 
+                message: 'User already exists', 
+                user: existingUser 
+            });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Insert new user
+        // Insert new user into our custom users table
         const { data: newUser, error } = await supabase
             .from('users')
             .insert([
-                { email, username, password: hashedPassword }
+                { 
+                    id: userId,
+                    email: email || null,
+                    username: username || email?.split('@')[0] || `user_${userId.slice(0, 8)}`,
+                    display_name: displayName || null,
+                    spotify_id: spotifyId || null
+                }
             ])
             .select()
             .single();
@@ -60,48 +48,41 @@ export const register = async (req: Request, res: Response) => {
             throw error;
         }
 
-        const token = jwt.sign({ userId: newUser.id }, process.env.JWT_SECRET || 'your_jwt_secret', {
-            expiresIn: '1h',
+        res.status(201).json({ 
+            message: 'User synced successfully', 
+            user: newUser 
         });
-
-        res.status(201).json({ token, userId: newUser.id, username: newUser.username });
     } catch (error) {
+        console.error('Sync user error:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
 
-export const login = async (req: Request, res: Response) => {
+// Get user profile from custom users table
+export const getUserProfile = async (req: Request, res: Response) => {
     try {
-        const { email, password } = req.body;
+        const { userId } = req.params;
 
-        if (!email || !password) {
-            return res.status(400).json({ message: 'Please provide email and password' });
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
         }
 
         const supabase = await getDatabase();
         
-        // Get user by email
-        const { data: user, error: userError } = await supabase
+        // Get user from custom users table
+        const { data: user, error } = await supabase
             .from('users')
-            .select('*')
-            .eq('email', email)
+            .select('id, email, username, displayName, spotifyId, createdAt')
+            .eq('id', userId)
             .single();
             
-        if (userError || !user) {
-            return res.status(400).json({ message: 'Invalid credentials' });
+        if (error || !user) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'your_jwt_secret', {
-            expiresIn: '1h',
-        });
-
-        res.status(200).json({ token, userId: user.id, username: user.username });
+        res.status(200).json({ user });
     } catch (error) {
+        console.error('Get user profile error:', error);
         res.status(500).json({ message: 'Server error', error });
     }
 };

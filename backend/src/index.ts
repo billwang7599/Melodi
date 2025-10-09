@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express, { Application, Request, Response } from "express";
 import { initializeDatabase } from "./db";
 import authRoutes from "./routes/auth";
+import postsRoutes from "./routes/posts";
+import songsRoutes from "./routes/songs";
 
 const cors = require("cors");
 
@@ -33,6 +35,8 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/posts", postsRoutes);
+app.use("/api/songs", songsRoutes);
 
 const startServer = async () => {
   try {
