@@ -1,11 +1,13 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { useSpotifyAPI } from '@/lib/spotify';
 
 interface FeedPost {
   post_id: number;
@@ -30,13 +32,43 @@ interface FeedPost {
   };
 }
 
+interface SpotifyTrack {
+  id: string;
+  name: string;
+  artists: Array<{
+    id: string;
+    name: string;
+  }>;
+  album: {
+    id: string;
+    name: string;
+    images: Array<{
+      url: string;
+      height: number;
+      width: number;
+    }>;
+  };
+  external_urls: {
+    spotify: string;
+  };
+}
+
 
 export default function FeedScreen() {
   const [feedData, setFeedData] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [postContent, setPostContent] = useState('');
+  const [selectedSong, setSelectedSong] = useState<{spotifyId: string, name: string, artist: string} | null>(null);
+  const [isPosting, setIsPosting] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const mutedColor = useThemeColor({}, 'textMuted');
   const primaryColor = useThemeColor({}, 'primary');
+  const { user } = useAuth();
+  const spotifyAPI = useSpotifyAPI();
 
   const fetchPosts = async () => {
     try {
@@ -80,6 +112,112 @@ export default function FeedScreen() {
   const handleComment = (postId: number) => {
     // Navigate to comments or show comment modal
     console.log('Navigate to comments for post:', postId);
+  };
+
+  const handleCreatePost = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a post');
+      return;
+    }
+
+    if (!postContent.trim()) {
+      Alert.alert('Error', 'Please enter some content for your post');
+      return;
+    }
+
+    if (!selectedSong) {
+      Alert.alert('Error', 'Please select a song for your post');
+      return;
+    }
+
+    try {
+      setIsPosting(true);
+      
+      console.log('Creating post with data:', {
+        userId: user.id,
+        content: postContent.trim(),
+        spotifyId: selectedSong.spotifyId,
+        visibility: 'public'
+      });
+      
+      const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          content: postContent.trim(),
+          spotifyId: selectedSong.spotifyId,
+          visibility: 'public'
+        })
+      });
+
+      console.log('Post creation response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Post creation error:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to create post`);
+      }
+
+      const result = await response.json();
+      console.log('Post created successfully:', result);
+
+      // Clear form
+      setPostContent('');
+      setSelectedSong(null);
+      
+      // Refresh feed
+      await fetchPosts();
+      
+      Alert.alert('Success', 'Post created successfully!');
+    } catch (err) {
+      console.error('Error creating post:', err);
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create post');
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleSelectSong = () => {
+    setShowSearchModal(true);
+  };
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const response = await spotifyAPI.search(query, 'track', 20);
+      setSearchResults(response.tracks.items);
+    } catch (error) {
+      console.error('Error searching tracks:', error);
+      Alert.alert('Error', 'Failed to search for tracks. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSongSelect = (track: SpotifyTrack) => {
+    setSelectedSong({
+      spotifyId: track.id,
+      name: track.name,
+      artist: track.artists.map(artist => artist.name).join(', ')
+    });
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const handleCloseSearchModal = () => {
+    setShowSearchModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -157,10 +295,62 @@ export default function FeedScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Small Banner */}
-      <View style={styles.banner}>
-        <ThemedText style={styles.bannerText}>Melodi</ThemedText>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* Small Banner */}
+        <View style={styles.banner}>
+          <ThemedText style={styles.bannerText}>Melodi</ThemedText>
+        </View>
+      
+      {/* Create Post Section */}
+      <View style={styles.createPostContainer}>
+        <View style={styles.createPostHeader}>
+          <View style={styles.avatarPlaceholder}>
+            <IconSymbol name="person.fill" size={16} color={mutedColor} />
+          </View>
+          <ThemedText style={styles.createPostLabel}>Share what you're listening to</ThemedText>
+        </View>
+        
+        <TextInput
+          style={[styles.postInput, { color: mutedColor }]}
+          placeholder="What's on your mind?"
+          placeholderTextColor={mutedColor}
+          value={postContent}
+          onChangeText={setPostContent}
+          multiline
+          maxLength={500}
+        />
+        
+        {selectedSong ? (
+          <View style={styles.selectedSongContainer}>
+            <ThemedText style={styles.selectedSongText}>
+              🎵 {selectedSong.name} - {selectedSong.artist}
+            </ThemedText>
+            <TouchableOpacity onPress={() => setSelectedSong(null)}>
+              <IconSymbol name="xmark.circle.fill" size={16} color={mutedColor} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.selectSongButton} onPress={handleSelectSong}>
+            <IconSymbol name="music.note" size={16} color={primaryColor} />
+            <ThemedText style={styles.selectSongText}>Select a song</ThemedText>
+          </TouchableOpacity>
+        )}
+        
+        <View style={styles.createPostActions}>
+          <ThemedText style={styles.characterCount}>{postContent.length}/500</ThemedText>
+          <TouchableOpacity
+            style={[styles.postButton, (!postContent.trim() || !selectedSong || isPosting) && styles.postButtonDisabled]}
+            onPress={handleCreatePost}
+            disabled={!postContent.trim() || !selectedSong || isPosting}
+          >
+            {isPosting ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <ThemedText style={styles.postButtonText}>Post</ThemedText>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.feedContainer}>
@@ -204,6 +394,75 @@ export default function FeedScreen() {
         )}
       </View>
     </ScrollView>
+
+    {/* Song Search Modal */}
+    <Modal
+      visible={showSearchModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleCloseSearchModal}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={handleCloseSearchModal}>
+            <IconSymbol name="xmark" size={20} color={mutedColor} />
+          </TouchableOpacity>
+          <ThemedText style={styles.modalTitle}>Search for a song</ThemedText>
+          <View style={{ width: 20 }} />
+        </View>
+
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={[styles.searchInput, { color: mutedColor }]}
+            placeholder="Search songs..."
+            placeholderTextColor={mutedColor}
+            value={searchQuery}
+            onChangeText={(text) => {
+              setSearchQuery(text);
+              handleSearch(text);
+            }}
+            autoFocus
+          />
+          {isSearching && (
+            <ActivityIndicator size="small" color={primaryColor} style={styles.searchLoader} />
+          )}
+        </View>
+
+        <ScrollView style={styles.searchResultsContainer}>
+          {searchResults.length > 0 ? (
+            searchResults.map((track) => (
+              <TouchableOpacity
+                key={track.id}
+                style={styles.searchResultItem}
+                onPress={() => handleSongSelect(track)}
+              >
+                <Image
+                  source={{ 
+                    uri: track.album.images[0]?.url || 'https://via.placeholder.com/50' 
+                  }}
+                  style={styles.searchResultImage}
+                />
+                <View style={styles.searchResultInfo}>
+                  <ThemedText style={styles.searchResultTitle}>{track.name}</ThemedText>
+                  <ThemedText style={styles.searchResultArtist}>
+                    {track.artists.map(artist => artist.name).join(', ')}
+                  </ThemedText>
+                  <ThemedText style={styles.searchResultAlbum}>{track.album.name}</ThemedText>
+                </View>
+                <IconSymbol name="chevron.right" size={16} color={mutedColor} />
+              </TouchableOpacity>
+            ))
+          ) : searchQuery.trim() && !isSearching ? (
+            <View style={styles.noResultsContainer}>
+              <IconSymbol name="music.note" size={32} color={mutedColor} style={styles.noResultsIcon} />
+              <ThemedText style={styles.noResultsText}>No songs found</ThemedText>
+              <ThemedText style={styles.noResultsSubtext}>Try a different search term</ThemedText>
+            </View>
+          ) : null}
+        </ScrollView>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -226,6 +485,94 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
   },
+  createPostContainer: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  createPostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  createPostLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+    opacity: 0.8,
+  },
+  postInput: {
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 60,
+    maxHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 6,
+    padding: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  selectedSongContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  selectedSongText: {
+    fontSize: 12,
+    flex: 1,
+    opacity: 0.8,
+  },
+  selectSongButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 6,
+    marginBottom: 12,
+    gap: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  selectSongText: {
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  createPostActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  characterCount: {
+    fontSize: 11,
+    opacity: 0.5,
+  },
+  postButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  postButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    opacity: 0.5,
+  },
+  postButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'black',
+  },
   feedContainer: {
     paddingHorizontal: 16,
     gap: 12,
@@ -233,9 +580,8 @@ const styles = StyleSheet.create({
   postContainer: {
     padding: 16,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 0.2,
+    borderColor: 'rgba(0, 0, 0, 0.2)',
   },
   userHeader: {
     flexDirection: 'row',
@@ -377,5 +723,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  searchLoader: {
+    marginLeft: 8,
+  },
+  searchResultsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  searchResultImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  searchResultArtist: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginBottom: 1,
+  },
+  searchResultAlbum: {
+    fontSize: 11,
+    opacity: 0.6,
+  },
+  noResultsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  noResultsIcon: {
+    marginBottom: 16,
+    opacity: 0.4,
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    opacity: 0.6,
+    textAlign: 'center',
   },
 });

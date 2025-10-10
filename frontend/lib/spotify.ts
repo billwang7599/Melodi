@@ -1,31 +1,53 @@
-import { getSupabase } from './supabase';
 
 export class SpotifyAPI {
   private accessToken: string | null = null;
+  private tokenExpiry: number | null = null;
+  private readonly CLIENT_ID = "0f5c814e10af4468988d67d8fc1c99c7";
+  private readonly CLIENT_SECRET = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET || "";
 
   constructor(accessToken?: string) {
     this.accessToken = accessToken || null;
   }
 
-  // Get access token from current session
+  // Get access token using client credentials flow
   async getAccessToken(): Promise<string | null> {
-    if (this.accessToken) {
+    // Check if we have a valid cached token
+    if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
       return this.accessToken;
     }
 
     try {
-      const supabaseClient = getSupabase();
-      const { data: { session } } = await supabaseClient.auth.getSession();
+      console.log('Getting new Spotify access token using client credentials...');
       
-      if (session?.provider_token) {
-        this.accessToken = session.provider_token;
+      const response = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${btoa(`${this.CLIENT_ID}:${this.CLIENT_SECRET}`)}`,
+        },
+        body: 'grant_type=client_credentials',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get access token: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.access_token) {
+        this.accessToken = data.access_token;
+        // Set expiry time (subtract 5 minutes for safety)
+        this.tokenExpiry = Date.now() + (data.expires_in * 1000) - (5 * 60 * 1000);
+        
+        console.log('Successfully obtained Spotify access token');
         return this.accessToken;
+      } else {
+        throw new Error('No access token in response');
       }
     } catch (error) {
       console.error('Failed to get Spotify access token:', error);
+      return null;
     }
-
-    return null;
   }
 
   // Make authenticated Spotify API request
