@@ -203,7 +203,7 @@ export default function PublicProfileScreen() {
           <IconSymbol name="lock.fill" size={64} color={mutedColor} style={styles.emptyIcon} />
           <ThemedText style={styles.emptyTitle}>Profile Not Available</ThemedText>
           <ThemedText style={[styles.emptyText, { color: mutedColor }]}>
-            This profile is private or doesn't exist.
+            This profile is private or doesn&apos;t exist.
           </ThemedText>
         </View>
       </ThemedView>
