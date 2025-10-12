@@ -10,6 +10,7 @@ const palette = {
   brandPrimaryDark: "#A29BFE",
   brandSecondary: "#00B894",
   brandAccent: "#FDCB6E",
+  delete: "#FF6B6B",
   danger: "#FF6B6B",
   success: "#2ECC71",
   light: {

@@ -3,8 +3,9 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { API } from "@/constants/theme";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, TouchableOpacity } from "react-native";
 
 interface User {
   id: number;
@@ -122,13 +123,18 @@ export default function UsersScreen() {
             Total users: {users.length}
           </ThemedText>
           {users.map((user) => (
-            <ThemedView key={user.id} style={styles.userContainer}>
-              <ThemedText style={styles.username}>{user.username}</ThemedText>
-              <ThemedText style={styles.email}>{user.email}</ThemedText>
-              <ThemedText style={styles.joinDate}>
-                Joined: {new Date(user.created_at).toLocaleDateString()}
-              </ThemedText>
-            </ThemedView>
+            <TouchableOpacity
+              key={user.id}
+              onPress={() => router.push(`/profile/${user.id}` as any)}
+            >
+              <ThemedView style={styles.userContainer}>
+                <ThemedText style={styles.username}>{user.username}</ThemedText>
+                <ThemedText style={styles.email}>{user.email}</ThemedText>
+                <ThemedText style={styles.joinDate}>
+                  Joined: {new Date(user.created_at).toLocaleDateString()}
+                </ThemedText>
+              </ThemedView>
+            </TouchableOpacity>
           ))}
         </>
       )}
