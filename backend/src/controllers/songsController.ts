@@ -53,18 +53,6 @@ const fetchSpotifyTrack = async (spotifyId: string) => {
     return await response.json();
 };
 
-// fetch song data from internal API
-const fetchTrackData = async (spotifyId: string) => {
-    const response = await fetch(`${ANALYSIS_URL}/analyze?songid=${spotifyId}`);
-
-    if (!response.ok) {
-        throw new Error(`Spotify API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-};
-
 // Helper function to create or get existing song (exported for reuse)
 export const createOrGetSong = async (spotifyId: string, supabase: any) => {
     // Check if song already exists
@@ -80,7 +68,6 @@ export const createOrGetSong = async (spotifyId: string, supabase: any) => {
 
     // Fetch track data from Spotify API
     const spotifyTrack = await fetchSpotifyTrack(spotifyId);
-    const data = await fetchTrackData(spotifyId);
 
     // Extract data from Spotify API response
     const songData = {
@@ -89,12 +76,6 @@ export const createOrGetSong = async (spotifyId: string, supabase: any) => {
         artistName: spotifyTrack.artists?.[0]?.name,
         albumName: spotifyTrack.album?.name,
         coverArtUrl: spotifyTrack.album?.images?.[0]?.url,
-
-        analysis: data.analysis,
-        embedding: data.embeddings,
-        valence: data.va.valence_average,
-        arousal: data.va.arousal_average,
-        va_prediction: data.va.predictions,
     };
 
     // Create new song
@@ -107,11 +88,6 @@ export const createOrGetSong = async (spotifyId: string, supabase: any) => {
                 artist_name: songData.artistName,
                 album_name: songData.albumName || null,
                 cover_art_url: songData.coverArtUrl || null,
-                analysis: songData.analysis,
-                embedding: songData.embedding,
-                valence: songData.valence,
-                arousal: songData.arousal,
-                va_prediction: songData.va_prediction,
             },
         ])
         .select()

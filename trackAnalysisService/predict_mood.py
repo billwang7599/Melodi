@@ -16,7 +16,7 @@ class PredictMood:
         Raises FileNotFoundError or ValueError on error.
         """
         # Use Supabase to fetch valence/arousal for each songId
-        songs = self.supabase.get_songs_by_ids(song_ids)
+        songs = self.supabase.get_song_data_by_ids(song_ids)
         if not songs or len(songs) == 0:
             raise FileNotFoundError(f"No songs found for provided songIds: {song_ids}")
         valence_arousal_list = []

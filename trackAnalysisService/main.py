@@ -9,7 +9,7 @@ predict_mood_instance = PredictMood()
 
 
 @app.get("/analyze")
-def analyze_song(songid: str = Query(..., description="Spotify track ID")):
+def analyze_song(songid: str = Query(..., description="Internal song id")):
     """
     Analyze a Spotify track by its song ID and return the full analysis data.
     """
@@ -24,9 +24,7 @@ def analyze_song(songid: str = Query(..., description="Spotify track ID")):
 
 @app.get("/predict-mood")
 def predict_mood_endpoint(
-    song_ids: list[str] = Query(
-        ..., description="List of song IDs for mood prediction"
-    ),
+    song_ids: str = Query(..., description="List of song IDs for mood prediction"),
 ):
     try:
         result = predict_mood_instance.predict(song_ids=song_ids)

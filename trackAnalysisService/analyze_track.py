@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 import essentia.standard as es
 import numpy as np
+from supabase_connection import SupabaseConnection
 
 # --- LOAD ENVIRONMENT VARIABLES ---
 load_dotenv()
@@ -14,25 +15,25 @@ load_dotenv()
 
 class TrackAnalyzer:
     TEMP_AUDIO_DIR = "temp_audio"
-    ANALYSIS_OUTPUT_DIR = "analysis_results"
 
     def __init__(self):
         os.makedirs(self.TEMP_AUDIO_DIR, exist_ok=True)
-        os.makedirs(self.ANALYSIS_OUTPUT_DIR, exist_ok=True)
 
-    def get_spotify_track_info(self, track_id):
-        """Get artist and title for a given Spotify track ID."""
+    def get_supabase_track_info(self, track_id):
+        """Get artist and title for a given track ID from Supabase."""
         try:
-            auth_manager = SpotifyClientCredentials()
-            sp = spotipy.Spotify(auth_manager=auth_manager)
-            track_url = f"https://open.spotify.com/track/{track_id}"
-            track = sp.track(track_url)
-            artist = track["artists"][0]["name"]
-            title = track["name"]
-            print(f"✅ Found track: '{title}' by {artist}")
-            return artist, title
+            supabase = SupabaseConnection()
+            song_data = supabase.get_songs_by_id([track_id])
+            if song_data:
+                artist = song_data["artist_name"]
+                title = song_data["song_name"]
+                print(f"✅ Found track in Supabase: '{title}' by {artist}")
+                return artist, title
+            else:
+                print(f"❌ No track found in Supabase for ID: {track_id}")
+                return None, None
         except Exception as e:
-            print(f"❌ Error getting track info from Spotify: {e}")
+            print(f"❌ Error getting track info from Supabase: {e}")
             return None, None
 
     def download_audio_from_youtube(self, artist, title):
@@ -152,21 +153,21 @@ class TrackAnalyzer:
             return None, None
 
     def process_track(self, spotify_track_id):
-        """Main method to process a track and return all results as a dict."""
-        artist, title = self.get_spotify_track_info(spotify_track_id)
+        """Main method to process a track and return all results as a dict.
+        Checks Supabase song_data first; if exists, returns it, else creates and returns new data.
+        """
+        supabase = SupabaseConnection()
+        # Check if song_data already exists
+        existing_data = supabase.get_song_data_by_ids([int(spotify_track_id)])
+        if existing_data and len(existing_data) > 0:
+            print(
+                f"✅ song_data already exists in Supabase for song_id {spotify_track_id}"
+            )
+            return existing_data[0]
+
+        artist, title = self.get_supabase_track_info(spotify_track_id)
         if not artist:
             return None
-
-        sanitized_title = "".join(
-            c for c in title if c.isalnum() or c in (" ", "_")
-        ).rstrip()
-        output_filename = os.path.join(
-            self.ANALYSIS_OUTPUT_DIR, f"{sanitized_title}.json"
-        )
-        if os.path.exists(output_filename):
-            print(f"✅ Already analyzed: {output_filename}")
-            with open(output_filename, "r") as f:
-                return json.load(f)
 
         audio_filepath = None
         try:
@@ -178,15 +179,29 @@ class TrackAnalyzer:
             embeddings, va = self.extract_va_and_embeddings(audio_filepath)
 
             if analysis is not None and embeddings is not None and va is not None:
-                result = {
-                    "analysis": analysis,
-                    "embeddings": embeddings,
-                    "va": va,
-                }
-                # with open(output_filename, "w") as f:
-                #     json.dump(result, f, indent=4, sort_keys=True)
-                # print(f"✅ All results saved to: {output_filename}")
-                return result
+                # Insert results into Supabase song_data table
+                try:
+                    supabase.insert_song_data(
+                        song_id=int(spotify_track_id),
+                        valence=va["valence_average"],
+                        arousal=va["arousal_average"],
+                        va_prediction=va,
+                        embedding=embeddings,
+                        analysis=analysis,
+                    )
+                    print(f"✅ Results inserted into Supabase song_data table.")
+                    # Query and return the full row just inserted
+                    inserted_row = supabase.get_song_data_by_ids(
+                        [int(spotify_track_id)]
+                    )
+                    if inserted_row and len(inserted_row) > 0:
+                        return inserted_row[0]
+                    else:
+                        print(f"❌ Could not retrieve inserted row from Supabase.")
+                        return None
+                except Exception as e:
+                    print(f"❌ Error inserting results into Supabase: {e}")
+                    return None
             else:
                 return None
         finally:
