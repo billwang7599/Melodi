@@ -1,7 +1,0 @@
-.env
-__pycache__/
-analysis_results/
-temp_audio/
-venv/
-.cache
-.DS_Store
