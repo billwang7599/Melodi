@@ -183,9 +183,9 @@ class TrackAnalyzer:
                     "embeddings": embeddings,
                     "va": va,
                 }
-                with open(output_filename, "w") as f:
-                    json.dump(result, f, indent=4, sort_keys=True)
-                print(f"✅ All results saved to: {output_filename}")
+                # with open(output_filename, "w") as f:
+                #     json.dump(result, f, indent=4, sort_keys=True)
+                # print(f"✅ All results saved to: {output_filename}")
                 return result
             else:
                 return None

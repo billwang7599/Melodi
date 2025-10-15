@@ -1,50 +1,48 @@
-import sys
 import os
-import json
 import numpy as np
+from supabase_connection import SupabaseConnection
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print('Usage: python predict_mood.py "Song Name"')
-        sys.exit(1)
+class PredictMood:
+    def __init__(self, results_dir="analysis_results", supabase=None):
+        self.results_dir = results_dir
+        self.supabase = supabase or SupabaseConnection()
 
-    song_name = sys.argv[1]
-    json_filename = f"{song_name}_va.json"
-    json_path = os.path.join("analysis_results", json_filename)
+    def predict(self, song_ids: list[str]):
+        """
+        Predict mood for a given song name (local file) or list of songIds (Supabase).
+        If song_ids is provided, fetch valence/arousal from Supabase and use those for calculation.
+        Returns a dict with normalized valence/arousal and mood similarity percentages.
+        Raises FileNotFoundError or ValueError on error.
+        """
+        # Use Supabase to fetch valence/arousal for each songId
+        songs = self.supabase.get_songs_by_ids(song_ids)
+        if not songs or len(songs) == 0:
+            raise FileNotFoundError(f"No songs found for provided songIds: {song_ids}")
+        valence_arousal_list = []
+        for song in songs:
+            if "valence" in song and "arousal" in song:
+                valence_arousal_list.append([song["valence"], song["arousal"]])
+        if not valence_arousal_list:
+            raise ValueError("No valence/arousal data found for provided songIds.")
+        predictions_array = np.array(valence_arousal_list)
+        avg = predictions_array.mean(axis=0)
+        valence, arousal = avg[0], avg[1]
 
-    if not os.path.exists(json_path):
-        print(f"File not found: {json_path}")
-        sys.exit(1)
+        percentages = self._mood_percentages(valence, arousal)
+        return {
+            "valence_score": valence,
+            "arousal_score": arousal,
+            "mood_percentages": percentages,
+        }
 
-    try:
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"Error reading JSON: {e}")
-        sys.exit(1)
-
-    predictions = data.get("predictions")
-    if predictions is None:
-        print(f"'predictions' key not found in {json_path}")
-        sys.exit(1)
-
-    # Average predictions using numpy
-    predictions_array = np.array(predictions)
-    avg = predictions_array.mean(axis=0)
-    # Normalize from 1-9 to -1 to 1
-    norm = ((avg - 1) / 8) * 2 - 1
-    result = (norm[0], norm[1])
-    print("Normalized (valence, arousal):", result)
-
-    # Calculate mood similarity percentages
-    def mood_percentages(valence, arousal):
+    def _mood_percentages(self, valence, arousal):
         moods = {
-            "Ecstatic / Elated": (1, 1),
-            "Anxious / Stressed": (-1, 1),
-            "Serene / Content": (1, -1),
-            "Depressed / Sad": (-1, -1),
-            "Neutral": (0, 0),
+            "ecstatic": (1, 1),
+            "anxious": (-1, 1),
+            "serene": (1, -1),
+            "depressed": (-1, -1),
+            "neutral": (0, 0),
         }
         max_distance = np.sqrt(8)
         result = np.array([valence, arousal])
@@ -55,8 +53,3 @@ if __name__ == "__main__":
             similarity = 1 - (distance / max_distance)
             percentages[mood] = round(similarity * 100, 2)
         return percentages
-
-    percentages = mood_percentages(norm[0], norm[1])
-    print("\nMood similarity percentages:")
-    for mood, percent in percentages.items():
-        print(f"{mood}: {percent}%")
