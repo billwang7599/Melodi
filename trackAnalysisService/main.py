@@ -24,7 +24,9 @@ def analyze_song(songid: str = Query(..., description="Internal song id")):
 
 @app.get("/predict-mood")
 def predict_mood_endpoint(
-    song_ids: str = Query(..., description="List of song IDs for mood prediction"),
+    song_ids: list[str] = Query(
+        ..., description="List of song IDs for mood prediction"
+    ),
 ):
     try:
         result = predict_mood_instance.predict(song_ids=song_ids)
