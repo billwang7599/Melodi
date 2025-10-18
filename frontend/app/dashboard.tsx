@@ -19,10 +19,10 @@ type RecentlyPlayedItem = { played_at: string; track: SpotifyTrack };
 type RecentlyPlayedResponse = { items?: RecentlyPlayedItem[] };
 type SearchTracksResponse = {
   tracks?: {
-    items?: Array<SpotifyTrack & {
+    items?: (SpotifyTrack & {
       id: string;
       uri?: string;
-    }>;
+    })[];
   };
 };
 
