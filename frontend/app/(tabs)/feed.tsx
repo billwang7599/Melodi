@@ -67,7 +67,7 @@ export default function FeedScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const mutedColor = useThemeColor({}, 'textMuted');
   const primaryColor = useThemeColor({}, 'primary');
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const spotifyAPI = useSpotifyAPI();
 
   const fetchPosts = async () => {
@@ -134,7 +134,6 @@ export default function FeedScreen() {
       setIsPosting(true);
       
       console.log('Creating post with data:', {
-        userId: user.id,
         content: postContent.trim(),
         spotifyId: selectedSong.spotifyId,
         visibility: 'public'
@@ -144,10 +143,10 @@ export default function FeedScreen() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
           'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({
-          userId: user.id,
           content: postContent.trim(),
           spotifyId: selectedSong.spotifyId,
           visibility: 'public'

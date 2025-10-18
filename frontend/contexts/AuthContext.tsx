@@ -9,6 +9,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  token: string | null;
   loading: boolean;
   signUp: (email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = {
     user,
     session,
+    token: session?.access_token ?? null,
     loading,
     signUp,
     signIn,
