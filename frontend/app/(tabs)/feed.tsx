@@ -71,7 +71,6 @@ export default function FeedScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const { user, token } = useAuth();
   const surfaceColor = useThemeColor({}, 'surface');
-  const { user } = useAuth();
   const spotifyAPI = useSpotifyAPI();
   const insets = useSafeAreaInsets();
 
