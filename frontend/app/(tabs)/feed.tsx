@@ -1,8 +1,10 @@
 import { Image } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,18 +37,18 @@ interface FeedPost {
 interface SpotifyTrack {
   id: string;
   name: string;
-  artists: Array<{
+  artists: {
     id: string;
     name: string;
-  }>;
+  }[];
   album: {
     id: string;
     name: string;
-    images: Array<{
+    images: {
       url: string;
       height: number;
       width: number;
-    }>;
+    }[];
   };
   external_urls: {
     spotify: string;
@@ -67,8 +69,10 @@ export default function FeedScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const mutedColor = useThemeColor({}, 'textMuted');
   const primaryColor = useThemeColor({}, 'primary');
+  const surfaceColor = useThemeColor({}, 'surface');
   const { user } = useAuth();
   const spotifyAPI = useSpotifyAPI();
+  const insets = useSafeAreaInsets();
 
   const fetchPosts = async () => {
     try {
@@ -240,7 +244,7 @@ export default function FeedScreen() {
   };
 
   const renderPost = (post: FeedPost) => (
-    <View key={post.post_id} style={styles.postContainer}>
+    <View key={post.post_id} style={[styles.postContainer, { backgroundColor: surfaceColor }]}>
       {/* User Header */}
       <View style={styles.userHeader}>
         <View style={styles.avatarPlaceholder}>
@@ -295,20 +299,20 @@ export default function FeedScreen() {
   );
 
   return (
-    <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {/* Small Banner */}
-        <View style={styles.banner}>
-          <ThemedText style={styles.bannerText}>Melodi</ThemedText>
+    <ThemedView style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 30 }]}>
+          <ThemedText style={styles.headerTitle}>Feed</ThemedText>
         </View>
       
       {/* Create Post Section */}
-      <View style={styles.createPostContainer}>
+      <View style={[styles.createPostContainer, { backgroundColor: surfaceColor }]}>
         <View style={styles.createPostHeader}>
           <View style={styles.avatarPlaceholder}>
             <IconSymbol name="person.circle.fill" size={16} color={mutedColor} />
           </View>
-          <ThemedText style={styles.createPostLabel}>Share what you're listening to</ThemedText>
+          <ThemedText style={styles.createPostLabel}>Share what you&apos;re listening to</ThemedText>
         </View>
         
         <TextInput
@@ -393,10 +397,10 @@ export default function FeedScreen() {
           feedData.map(renderPost)
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
 
-    {/* Song Search Modal */}
-    <Modal
+      {/* Song Search Modal */}
+      <Modal
       visible={showSearchModal}
       animationType="slide"
       presentationStyle="pageSheet"
@@ -461,8 +465,8 @@ export default function FeedScreen() {
           ) : null}
         </ScrollView>
       </View>
-    </Modal>
-    </>
+      </Modal>
+    </ThemedView>
   );
 }
 
@@ -470,29 +474,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollView: {
+    flex: 1,
+  },
   contentContainer: {
-    paddingTop: 20,
+    paddingBottom: 20,
   },
-  banner: {
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    marginHorizontal: 16,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    marginBottom: 8,
   },
-  bannerText: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    lineHeight: 34,
   },
   createPostContainer: {
     marginHorizontal: 16,
     marginBottom: 20,
     padding: 16,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.3)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   createPostHeader: {
     flexDirection: 'row',
@@ -581,7 +588,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 0.2,
-    borderColor: 'rgba(0, 0, 0, 0.2)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   userHeader: {
     flexDirection: 'row',

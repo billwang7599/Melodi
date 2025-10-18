@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const mutedColor = useThemeColor({}, 'textMuted');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [profileStats, setProfileStats] = useState<ProfileStats>({
@@ -99,7 +101,7 @@ export default function ProfileScreen() {
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 30 }]}>
           <ThemedText style={styles.headerTitle}>Profile</ThemedText>
           <View style={styles.headerActions}>
             <TouchableOpacity 
@@ -244,12 +246,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
+    marginBottom: 8,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    lineHeight: 34,
   },
   headerActions: {
     flexDirection: 'row',
@@ -332,6 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
+    marginBottom: 16,
     fontSize: 18,
     fontWeight: 'bold',
   },
