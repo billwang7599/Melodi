@@ -77,7 +77,7 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: "https://ebb1c8deb7f1.ngrok-free.app",
+  BACKEND_URL: "https://tambra-unfeoffed-jessica.ngrok-free.dev",
 };
 
 export const SUPABASE = {

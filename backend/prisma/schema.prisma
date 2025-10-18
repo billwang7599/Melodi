@@ -1,98 +1,99 @@
-// This is your Prisma schema file.
-// Learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// ------------------------------------------------ //
-//                       MODELS                     //
-// ------------------------------------------------ //
-
 model User {
-  id               String         @id @default(uuid())
-  username         String         @unique
-  email            String?        @unique
-  displayName      String?        @map("display_name")
-  spotifyId        String?        @map("spotify_id")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  posts            Post[]
-  likes            Like[]
-  friendsSent      Friend[]       @relation("UserOne")
-  friendsReceived  Friend[]       @relation("UserTwo")
-  friendsActioned  Friend[]       @relation("ActionUser")
+  id                                    String   @id @default(uuid()) @db.Uuid
+  username                              String   @unique
+  email                                 String?  @unique
+  displayName                           String?  @map("display_name")
+  spotifyId                             String?  @map("spotify_id")
+  createdAt                             DateTime @default(now()) @map("created_at")
+  bio                                   String?
+  favoriteGenres                        String?  @map("favorite_genres")
+  isPublic                              Boolean  @default(true) @map("is_public")
+  friends_friends_action_user_idTousers Friend[] @relation("friends_action_user_idTousers")
+  friends_friends_user_one_idTousers    Friend[] @relation("friends_user_one_idTousers")
+  friends_friends_user_two_idTousers    Friend[] @relation("friends_user_two_idTousers")
+  likes                                 Like[]
+  posts                                 Post[]
 
   @@map("users")
 }
 
 model Friend {
-  userOneId     String
-  userTwoId     String
-  actionUserId  String
-  status        FriendshipStatus @default(pending)
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
+  user_one_id                         String           @db.Uuid
+  user_two_id                         String           @db.Uuid
+  action_user_id                      String           @db.Uuid
+  status                              FriendshipStatus @default(pending)
+  createdAt                           DateTime         @default(now()) @map("created_at")
+  updatedAt                           DateTime         @updatedAt @map("updated_at")
+  users_friends_action_user_idTousers User             @relation("friends_action_user_idTousers", fields: [action_user_id], references: [id], onDelete: Cascade)
+  users_friends_user_one_idTousers    User             @relation("friends_user_one_idTousers", fields: [user_one_id], references: [id], onDelete: Cascade)
+  users_friends_user_two_idTousers    User             @relation("friends_user_two_idTousers", fields: [user_two_id], references: [id], onDelete: Cascade)
 
-  userOne       User @relation("UserOne", fields: [userOneId], references: [id], onDelete: Cascade)
-  userTwo       User @relation("UserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
-  actionUser    User @relation("ActionUser", fields: [actionUserId], references: [id], onDelete: Cascade)
-
-  @@id([userOneId, userTwoId])
+  @@id([user_one_id, user_two_id])
   @@map("friends")
 }
 
 model Post {
   postId      Int            @id @default(autoincrement()) @map("post_id")
-  userId      String
+  user_id     String         @db.Uuid
   content     String
-  topSongId   BigInt
+  top_song_id BigInt
   likeCount   Int            @default(0) @map("like_count")
   visibility  PostVisibility @default(public)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
-
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topSong     Song             @relation(fields: [topSongId], references: [songId])
   likes       Like[]
+  songs       Song           @relation(fields: [top_song_id], references: [songId])
+  users       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("posts")
 }
 
 model Song {
-  songId      BigInt   @id @default(autoincrement()) @map("song_id")
-  spotifyId   String   @unique @map("spotify_id")
-  songName    String   @map("song_name")
-  artistName  String   @map("artist_name")
-  albumName   String?  @map("album_name")
-  coverArtUrl String?  @map("cover_art_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  posts          Post[]
+  songId      BigInt     @id @default(autoincrement()) @map("song_id")
+  spotifyId   String     @unique @map("spotify_id")
+  songName    String     @map("song_name")
+  artistName  String     @map("artist_name")
+  albumName   String?    @map("album_name")
+  coverArtUrl String?    @map("cover_art_url")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  posts       Post[]
+  song_data   song_data?
 
   @@map("songs")
 }
 
 model Like {
-  userId    String
-  postId    Int
+  user_id   String   @db.Uuid
+  post_id   Int
   createdAt DateTime @default(now()) @map("created_at")
+  posts     Post     @relation(fields: [post_id], references: [postId], onDelete: Cascade)
+  users     User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [postId], onDelete: Cascade)
-
-  @@id([userId, postId])
+  @@id([user_id, post_id])
   @@map("likes")
 }
 
-// ------------------------------------------------ //
-//                        ENUMS                     //
-// ------------------------------------------------ //
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model song_data {
+  song_id       BigInt   @id @unique
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  valence       Decimal? @db.Decimal
+  arousal       Decimal? @db.Decimal
+  va_prediction Json?
+  embedding     Json?
+  analysis      Json?
+  songs         Song     @relation(fields: [song_id], references: [songId], onDelete: Cascade, onUpdate: NoAction)
+}
 
 enum FriendshipStatus {
   pending

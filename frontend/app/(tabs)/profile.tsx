@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -9,8 +8,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
 
 interface ProfileStats {
   totalPosts: number;
@@ -18,20 +15,6 @@ interface ProfileStats {
   totalFollowing: number;
 }
 
-interface TopTrack {
-  id: string;
-  name: string;
-  artist: string;
-  albumArt: string;
-  previewUrl?: string;
-}
-
-interface TopArtist {
-  id: string;
-  name: string;
-  image: string;
-  genres: string[];
-}
 
 interface ListeningStats {
   totalMinutes: number;
@@ -48,76 +31,13 @@ export default function ProfileScreen() {
   const borderColor = useThemeColor({}, 'border');
 
   const [loading, setLoading] = useState(true);
-  const [timeRangeLoading, setTimeRangeLoading] = useState(false);
   const [profileStats, setProfileStats] = useState<ProfileStats>({
     totalPosts: 0,
     totalFollowers: 0,
     totalFollowing: 0,
   });
-  const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
-  const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
   const [listeningStats, setListeningStats] = useState<ListeningStats | null>(null);
-  const [selectedTimeRange, setSelectedTimeRange] = useState<'short_term' | 'medium_term' | 'long_term'>('medium_term');
 
-  // function to load music data based on time range
-  const loadMusicData = useCallback(async (timeRange: 'short_term' | 'medium_term' | 'long_term') => {
-    try {
-      // TODO replace w/ API calls for time-range specific data
-      
-      // simulate delay
-      await new Promise(resolve => setTimeout(resolve, 400));
-      
-      setTopTracks([
-        {
-          id: '1',
-          name: 'Blinding Lights',
-          artist: 'The Weeknd',
-          albumArt: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36',
-        },
-        {
-          id: '2',
-          name: 'Levitating',
-          artist: 'Dua Lipa',
-          albumArt: 'https://i.scdn.co/image/ab67616d0000b273be841ba4bc24340152e3a79a',
-        },
-        {
-          id: '3',
-          name: 'Save Your Tears',
-          artist: 'The Weeknd',
-          albumArt: 'https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36',
-        },
-        {
-          id: '4',
-          name: 'Peaches',
-          artist: 'Justin Bieber',
-          albumArt: 'https://i.scdn.co/image/ab67616d0000b273e6f407c7f3a0ec98845e4431',
-        },
-      ]);
-
-      setTopArtists([
-        {
-          id: '1',
-          name: 'The Weeknd',
-          image: 'https://i.scdn.co/image/ab6761610000e5eb214f3cf1cbe7139c1e26ffbb',
-          genres: ['pop', 'r&b'],
-        },
-        {
-          id: '2',
-          name: 'Dua Lipa',
-          image: 'https://i.scdn.co/image/ab6761610000e5eb0c68f6c95232e716f0abee8d',
-          genres: ['pop', 'dance'],
-        },
-        {
-          id: '3',
-          name: 'Drake',
-          image: 'https://i.scdn.co/image/ab6761610000e5eb4293385d324db8558179afd9',
-          genres: ['hip-hop', 'rap'],
-        },
-      ]);
-    } catch (error) {
-      console.error('Error loading music data:', error);
-    }
-  }, []);
 
   // Load initial profile data (only runs once on mount)
   useEffect(() => {
@@ -142,8 +62,6 @@ export default function ProfileScreen() {
           energy: 68,
         });
 
-        // Also load initial music data
-        await loadMusicData('medium_term');
       } catch (error) {
         console.error('Error loading initial profile data:', error);
       } finally {
@@ -154,15 +72,8 @@ export default function ProfileScreen() {
     if (user) {
       loadInitialProfileData();
     }
-  }, [user, loadMusicData]);
+  }, [user]);
 
-  // handle time range changes
-  const handleTimeRangeChange = async (timeRange: 'short_term' | 'medium_term' | 'long_term') => {
-    setSelectedTimeRange(timeRange);
-    setTimeRangeLoading(true);
-    await loadMusicData(timeRange);
-    setTimeRangeLoading(false);
-  };
 
   const handleLogout = async () => {
     try {
@@ -172,11 +83,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const timeRangeLabels = {
-    short_term: 'Last Month',
-    medium_term: 'Last 6 Months',
-    long_term: 'All Time',
-  };
 
   if (loading) {
     return (
@@ -309,114 +215,6 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Time Range Selector */}
-        <View style={styles.timeRangeSelector}>
-          {(['short_term', 'medium_term', 'long_term'] as const).map((range) => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.timeRangeButton,
-                selectedTimeRange === range && [styles.timeRangeButtonActive, { backgroundColor: primaryColor }],
-                { borderColor },
-              ]}
-              onPress={() => handleTimeRangeChange(range)}
-              disabled={timeRangeLoading}
-            >
-              <ThemedText
-                style={[
-                  styles.timeRangeText,
-                  selectedTimeRange === range && styles.timeRangeTextActive,
-                  selectedTimeRange !== range && { color: mutedColor },
-                  timeRangeLoading && styles.timeRangeTextDisabled,
-                ]}
-              >
-                {timeRangeLabels[range]}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Top Tracks */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Your Top Tracks</ThemedText>
-            <TouchableOpacity>
-              <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>See All</ThemedText>
-            </TouchableOpacity>
-          </View>
-          
-          {timeRangeLoading ? (
-            <View style={styles.musicLoadingContainer}>
-              <ActivityIndicator size="small" color={primaryColor} />
-              <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
-                Loading tracks...
-              </ThemedText>
-            </View>
-          ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {topTracks.map((track) => (
-                <TouchableOpacity 
-                  key={track.id} 
-                  style={[styles.trackCard, { width: CARD_WIDTH }]}
-                >
-                  <Image
-                    source={{ uri: track.albumArt }}
-                    style={styles.trackImage}
-                  />
-                  <ThemedText style={styles.trackName} numberOfLines={2}>
-                    {track.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.trackArtist, { color: mutedColor }]} numberOfLines={1}>
-                    {track.artist}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* Top Artists */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Your Top Artists</ThemedText>
-            <TouchableOpacity>
-              <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>See All</ThemedText>
-            </TouchableOpacity>
-          </View>
-          
-          {timeRangeLoading ? (
-            <View style={styles.musicLoadingContainer}>
-              <ActivityIndicator size="small" color={primaryColor} />
-              <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
-                Loading artists...
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.artistsGrid}>
-              {topArtists.map((artist) => (
-                <TouchableOpacity 
-                  key={artist.id} 
-                  style={[styles.artistCard, { backgroundColor: surfaceColor, borderColor }]}
-                >
-                  <Image
-                    source={{ uri: artist.image }}
-                    style={styles.artistImage}
-                  />
-                  <ThemedText style={styles.artistName} numberOfLines={1}>
-                    {artist.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.artistGenres, { color: mutedColor }]} numberOfLines={1}>
-                    {artist.genres.slice(0, 2).join(', ')}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -565,92 +363,6 @@ const styles = StyleSheet.create({
   },
   listeningStatLabel: {
     fontSize: 12,
-    textAlign: 'center',
-  },
-  timeRangeSelector: {
-    flexDirection: 'row',
-    marginTop: 24,
-    marginHorizontal: 16,
-    gap: 8,
-  },
-  timeRangeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  timeRangeButtonActive: {
-    borderWidth: 0,
-  },
-  timeRangeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  timeRangeTextActive: {
-    color: '#FFFFFF',
-  },
-  timeRangeTextDisabled: {
-    opacity: 0.5,
-  },
-  musicLoadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  musicLoadingText: {
-    fontSize: 14,
-  },
-  horizontalScroll: {
-    paddingRight: 16,
-    gap: 12,
-  },
-  trackCard: {
-    marginRight: 12,
-  },
-  trackImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  trackName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  trackArtist: {
-    fontSize: 12,
-  },
-  artistsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  artistCard: {
-    width: (width - 48) / 3,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  artistImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
-  },
-  artistName: {
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  artistGenres: {
-    fontSize: 10,
     textAlign: 'center',
   },
   bottomPadding: {

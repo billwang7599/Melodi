@@ -244,7 +244,7 @@ export default function FeedScreen() {
       {/* User Header */}
       <View style={styles.userHeader}>
         <View style={styles.avatarPlaceholder}>
-          <IconSymbol name="person.fill" size={16} color={mutedColor} />
+          <IconSymbol name="person.circle.fill" size={16} color={mutedColor} />
         </View>
         <View style={styles.userInfo}>
           <ThemedText style={styles.username}>
@@ -306,7 +306,7 @@ export default function FeedScreen() {
       <View style={styles.createPostContainer}>
         <View style={styles.createPostHeader}>
           <View style={styles.avatarPlaceholder}>
-            <IconSymbol name="person.fill" size={16} color={mutedColor} />
+            <IconSymbol name="person.circle.fill" size={16} color={mutedColor} />
           </View>
           <ThemedText style={styles.createPostLabel}>Share what you're listening to</ThemedText>
         </View>
