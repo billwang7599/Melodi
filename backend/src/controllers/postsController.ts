@@ -1,16 +1,24 @@
 import { Request, Response } from 'express';
 import { getDatabase } from '../db';
+import { AuthRequest } from '../middleware/auth';
 import { createOrGetSong } from './songsController';
 
 // Create a new post
-export const createPost = async (req: Request, res: Response) => {
+export const createPost = async (req: AuthRequest, res: Response) => {
     try {
-        const { userId, content, spotifyId, visibility = 'public' } = req.body;
+        const { content, spotifyId, visibility = 'public' } = req.body;
+        const userId = req.userId; // Get user ID from authenticated request
 
         // Validate required fields
-        if (!userId || !content || !spotifyId) {
+        if (!userId) {
+            return res.status(401).json({ 
+                message: 'Authentication required' 
+            });
+        }
+
+        if (!content || !spotifyId) {
             return res.status(400).json({ 
-                message: 'User ID, content, and Spotify ID are required' 
+                message: 'Content and Spotify ID are required' 
             });
         }
 
