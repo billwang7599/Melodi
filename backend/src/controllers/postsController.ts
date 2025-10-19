@@ -175,9 +175,10 @@ export const getPostsByUserId = async (req: Request, res: Response) => {
 };
 
 // Get all posts (for feed functionality - bonus)
-export const getAllPosts = async (req: Request, res: Response) => {
+export const getAllPosts = async (req: AuthRequest, res: Response) => {
     try {
         const { limit = 20, offset = 0, visibility = 'public' } = req.query;
+        const userId = req.userId; // Optional user ID for like status
 
         const supabase = await getDatabase();
 
@@ -205,6 +206,9 @@ export const getAllPosts = async (req: Request, res: Response) => {
                     artist_name,
                     album_name,
                     cover_art_url
+                ),
+                likes!left (
+                    user_id
                 )
             `, { count: 'exact' })
             .eq('visibility', visibility)
@@ -216,9 +220,15 @@ export const getAllPosts = async (req: Request, res: Response) => {
             throw error;
         }
 
+        // Process posts to add isLiked field for the current user
+        const processedPosts = posts?.map(post => ({
+            ...post,
+            isLiked: userId ? post.likes?.some((like: any) => like.user_id === userId) : false
+        })) || [];
+
         res.status(200).json({
             message: 'Posts retrieved successfully',
-            posts: posts || [],
+            posts: processedPosts,
             pagination: {
                 total: count || 0,
                 limit: Number(limit),
@@ -229,6 +239,120 @@ export const getAllPosts = async (req: Request, res: Response) => {
 
     } catch (error) {
         console.error('Error in getAllPosts:', error);
+        res.status(500).json({ 
+            message: 'Internal server error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Like or unlike a post
+export const toggleLike = async (req: AuthRequest, res: Response) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.userId; // Get user ID from authenticated request
+
+        // Validate required fields
+        if (!userId) {
+            return res.status(401).json({ 
+                message: 'Authentication required' 
+            });
+        }
+
+        if (!postId) {
+            return res.status(400).json({ 
+                message: 'Post ID is required' 
+            });
+        }
+
+        const supabase = await getDatabase();
+
+        // Check if post exists
+        const { data: post, error: postError } = await supabase
+            .from('posts')
+            .select('post_id, like_count')
+            .eq('post_id', postId)
+            .single();
+
+        if (postError || !post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Check if user has already liked this post
+        const { data: existingLike, error: likeError } = await supabase
+            .from('likes')
+            .select('user_id, post_id')
+            .eq('user_id', userId)
+            .eq('post_id', postId)
+            .single();
+
+        if (likeError && likeError.code !== 'PGRST116') {
+            console.error('Error checking existing like:', likeError);
+            throw likeError;
+        }
+
+        let newLikeCount = post.like_count;
+        let action = '';
+
+        if (existingLike) {
+            // Unlike the post
+            const { error: deleteError } = await supabase
+                .from('likes')
+                .delete()
+                .eq('user_id', userId)
+                .eq('post_id', postId);
+
+            if (deleteError) {
+                console.error('Error removing like:', deleteError);
+                throw deleteError;
+            }
+
+            newLikeCount = Math.max(0, post.like_count - 1);
+            action = 'unliked';
+        } else {
+            // Like the post
+            const { error: insertError } = await supabase
+                .from('likes')
+                .insert([
+                    {
+                        user_id: userId,
+                        post_id: parseInt(postId),
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+
+            if (insertError) {
+                console.error('Error adding like:', insertError);
+                throw insertError;
+            }
+
+            newLikeCount = post.like_count + 1;
+            action = 'liked';
+        }
+
+        // Update the like count in the posts table
+        const { error: updateError } = await supabase
+            .from('posts')
+            .update({ 
+                like_count: newLikeCount,
+                updated_at: new Date().toISOString()
+            })
+            .eq('post_id', postId);
+
+        if (updateError) {
+            console.error('Error updating like count:', updateError);
+            throw updateError;
+        }
+
+        res.status(200).json({
+            message: `Post ${action} successfully`,
+            likeCount: newLikeCount,
+            action: action,
+            isLiked: action === 'liked'
+        });
+
+    } catch (error) {
+        console.error('Error in toggleLike:', error);
         res.status(500).json({ 
             message: 'Internal server error',
             error: error instanceof Error ? error.message : 'Unknown error'
