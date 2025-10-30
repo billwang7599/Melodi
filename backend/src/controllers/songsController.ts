@@ -1,9 +1,6 @@
 import { Request, Response } from "express";
 import { getDatabase } from "../db";
 
-// env variables
-const ANALYSIS_URL = process.env.ANALYSIS_URL;
-
 // Helper function to get Spotify access token
 const getSpotifyAccessToken = async (): Promise<string> => {
     const clientId = process.env.SPOTIFY_CLIENT_ID;
