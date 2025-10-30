@@ -1,11 +1,12 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -41,40 +42,57 @@ export default function ProfileScreen() {
   const [listeningStats, setListeningStats] = useState<ListeningStats | null>(null);
 
 
-  // Load initial profile data (only runs once on mount)
-  useEffect(() => {
-    const loadInitialProfileData = async () => {
-      setLoading(true);
-      try {
-        // TODO: Replace with real API calls
-        // Simulating API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Mock data - This should be fetched once and not change with time range
-        setProfileStats({
-          totalPosts: 42,
-          totalFollowers: 128,
-          totalFollowing: 89,
-        });
+  // Load profile data function
+  const loadProfileData = useCallback(async () => {
+    if (!user?.id) {
+      return;
+    }
 
-        setListeningStats({
-          totalMinutes: 12456,
-          topGenre: 'Pop',
-          danceability: 72,
-          energy: 68,
-        });
+    setLoading(true);
+    try {
+      // Fetch real profile stats from backend
+      const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${user.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      } catch (error) {
-        console.error('Error loading initial profile data:', error);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
 
-    if (user) {
-      loadInitialProfileData();
+      const result = await response.json();
+      
+      if (result.user?.stats) {
+        setProfileStats({
+          totalPosts: result.user.stats.totalPosts || 0,
+          totalFollowers: result.user.stats.totalFollowers || 0,
+          totalFollowing: result.user.stats.totalFollowing || 0,
+        });
+      }
+
+      // Mock listening stats for now (TODO: Replace with real API when available)
+      setListeningStats({
+        totalMinutes: 12456,
+        topGenre: 'Pop',
+        danceability: 72,
+        energy: 68,
+      });
+
+    } catch (error) {
+      console.error('Error loading profile data:', error);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
+
+  // Load profile data when page comes into focus (refreshes stats)
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileData();
+    }, [loadProfileData])
+  );
 
 
   const handleLogout = async () => {
@@ -144,15 +162,21 @@ export default function ProfileScreen() {
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => user && router.push(`/followers?userId=${user.id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => user && router.push(`/following?userId=${user.id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowing}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Following</ThemedText>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Edit Profile Button */}

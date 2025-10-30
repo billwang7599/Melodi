@@ -4,6 +4,7 @@ import { initializeDatabase } from "./db";
 import authRoutes from "./routes/auth";
 import postsRoutes from "./routes/posts";
 import songsRoutes from "./routes/songs";
+import usersRoutes from "./routes/users";
 
 const cors = require("cors");
 
@@ -37,6 +38,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/songs", songsRoutes);
+app.use("/api/users", usersRoutes);
 
 const startServer = async () => {
   try {

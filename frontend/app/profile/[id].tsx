@@ -35,6 +35,7 @@ export default function PublicProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -59,8 +60,31 @@ export default function PublicProfileScreen() {
         
         setUserProfile(result.user);
 
-        // TODO: Check if already following from API
-        setIsFollowing(false);
+        // Check if already following from API
+        if (token && user?.id !== id) {
+          try {
+            const followStatusResponse = await fetch(
+              `${API.BACKEND_URL}/api/users/${id}/following-status`,
+              {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (followStatusResponse.ok) {
+              const followStatusResult = await followStatusResponse.json();
+              setIsFollowing(followStatusResult.isFollowing || false);
+            }
+          } catch (error) {
+            console.error('Error checking follow status:', error);
+            setIsFollowing(false);
+          }
+        } else {
+          setIsFollowing(false);
+        }
       } catch (error) {
         console.error('Error loading user profile:', error);
         setUserProfile(null);
@@ -72,15 +96,54 @@ export default function PublicProfileScreen() {
     if (id) {
       loadUserProfile();
     }
-  }, [id]);
+  }, [id, token, user]);
 
   const handleFollow = async () => {
+    if (!token) {
+      return;
+    }
+
+    const wasFollowing = isFollowing;
+    const newFollowingState = !isFollowing;
+
+    // Optimistic update
+    setIsFollowing(newFollowingState);
+
     try {
-      // TODO: Implement follow/unfollow API call
-      setIsFollowing(!isFollowing);
-      console.log(isFollowing ? 'Unfollowing user' : 'Following user', id);
+      const endpoint = 'follow';
+      const method = newFollowingState ? 'POST' : 'DELETE';
+
+      const response = await fetch(
+        `${API.BACKEND_URL}/api/users/${id}/${endpoint}`,
+        {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Update user profile stats
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          stats: {
+            ...userProfile.stats,
+            totalFollowers: newFollowingState
+              ? userProfile.stats.totalFollowers + 1
+              : userProfile.stats.totalFollowers - 1,
+          },
+        });
+      }
     } catch (error) {
       console.error('Error following/unfollowing user:', error);
+      // Revert optimistic update
+      setIsFollowing(wasFollowing);
     }
   };
 
@@ -196,15 +259,21 @@ export default function PublicProfileScreen() {
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push(`/followers?userId=${id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{userProfile.stats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push(`/following?userId=${id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{userProfile.stats.totalFollowing}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Following</ThemedText>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Follow Button */}
