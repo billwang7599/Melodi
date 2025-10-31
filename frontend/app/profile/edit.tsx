@@ -1,8 +1,10 @@
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +12,7 @@ import {
   Switch,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -33,6 +35,8 @@ export default function EditProfileScreen() {
   const [favoriteGenres, setFavoriteGenres] = useState('');
   const [isPublicProfile, setIsPublicProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+    const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -61,6 +65,7 @@ export default function EditProfileScreen() {
         setBio(profile.bio || '');
         setFavoriteGenres(profile.favorite_genres || '');
         setIsPublicProfile(profile.is_public ?? true);
+        setProfileImageUri(profile.profile_image_url || null);
       } catch (error) {
         console.error('Error loading user profile:', error);
         Alert.alert('Error', 'Failed to load profile data');
@@ -71,6 +76,65 @@ export default function EditProfileScreen() {
 
     loadUserProfile();
   }, [user?.id]);
+
+  const pickImage = async () => {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'We need camera roll permissions to select a profile picture.');
+      return;
+    }
+
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setProfileImageUri(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri: string): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      
+      // Extract filename and type
+      const filename = imageUri.split('/').pop() || 'profile.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('file', {
+        uri: imageUri,
+        name: filename,
+        type,
+      } as any);
+
+      formData.append('userId', user?.id || '');
+
+      const response = await fetch(`${API.BACKEND_URL}/api/upload/profile-image`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.imageUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+  };
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -85,6 +149,18 @@ export default function EditProfileScreen() {
 
     try {
       setIsSaving(true);
+
+      let imageUrl = profileImageUri;
+      
+      // Upload new image if changed
+      if (profileImageUri && !profileImageUri.startsWith('http')) {
+        const uploadedUrl = await uploadImage(profileImageUri);
+        if (!uploadedUrl) {
+          Alert.alert('Warning', 'Failed to upload profile picture, but other changes will be saved.');
+        } else {
+          imageUrl = uploadedUrl;
+        }
+      }
       
       // Update user profile via backend API
       const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${user.id}`, {
@@ -97,6 +173,7 @@ export default function EditProfileScreen() {
           bio: bio.trim(),
           favoriteGenres: favoriteGenres.trim(),
           isPublic: isPublicProfile,
+          profileImageUrl: imageUrl
         }),
       });
 
@@ -166,9 +243,16 @@ export default function EditProfileScreen() {
           {/* Profile Picture */}
           <View style={styles.section}>
             <View style={styles.avatarSection}>
-              <View style={[styles.avatar, { borderColor: primaryColor }]}>
-                <IconSymbol name="person.circle.fill" size={48} color={primaryColor} />
-              </View>
+              <TouchableOpacity 
+                style={[styles.avatar, { borderColor: primaryColor }]}
+                onPress={pickImage}
+              >
+                {profileImageUri ? (
+                  <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+                ) : (
+                  <IconSymbol name="person.circle.fill" size={48} color={primaryColor} />
+                )}
+              </TouchableOpacity>
               <TouchableOpacity style={styles.changePhotoButton}>
                 <ThemedText style={[styles.changePhotoText, { color: primaryColor }]}>
                   Change Photo
@@ -366,7 +450,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+    backgroundColor: 'rgba(27, 0, 234, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -439,6 +523,11 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
   },
 });
 
