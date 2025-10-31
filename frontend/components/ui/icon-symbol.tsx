@@ -23,6 +23,9 @@ const MAPPING = {
   'people': 'group',
   'people-outline': 'people',
   'person.3.fill': 'group',
+  'list.bullet': 'format-list-bulleted',
+  'magnifyingglass': 'search',
+  'person.fill': 'person'
 } as IconMapping;
 
 /**
