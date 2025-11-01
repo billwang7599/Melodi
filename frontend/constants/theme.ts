@@ -10,7 +10,6 @@ const palette = {
   brandPrimaryDark: "#A29BFE",
   brandSecondary: "#00B894",
   brandAccent: "#FDCB6E",
-  delete: "#FF6B6B",
   danger: "#FF6B6B",
   success: "#2ECC71",
   light: {
@@ -40,8 +39,8 @@ export const Colors = {
     background: palette.light.background,
     surface: palette.light.surface,
     border: palette.light.border,
-    tint: palette.brandPrimary,
-    primary: palette.brandPrimary,
+    tint: "#7996A5",
+    primary: "#7996A5",
     primaryMuted: "#DDD7FF",
     secondary: palette.brandSecondary,
     accent: palette.brandAccent,
@@ -52,7 +51,7 @@ export const Colors = {
     inputBackground: palette.light.surface,
     inputBorder: "#C6C0E0",
     tabIconDefault: palette.light.textMuted,
-    tabIconSelected: palette.brandPrimary,
+    tabIconSelected: "#7996A5",
   },
   dark: {
     text: palette.dark.text,
@@ -60,8 +59,8 @@ export const Colors = {
     background: palette.dark.background,
     surface: palette.dark.surface,
     border: palette.dark.border,
-    tint: palette.brandPrimaryDark,
-    primary: palette.brandPrimaryDark,
+    tint: "#7996A5",
+    primary: "#7996A5",
     primaryMuted: "#3B3362",
     secondary: "#55EFC4",
     accent: "#FFD479",
@@ -72,12 +71,12 @@ export const Colors = {
     inputBackground: "#24203C",
     inputBorder: "#4C436B",
     tabIconDefault: palette.dark.textMuted,
-    tabIconSelected: palette.brandPrimaryDark,
+    tabIconSelected: "#7996A5",
   },
 };
 
 export const API = {
-  BACKEND_URL: "https://samira-unavengeable-abrielle.ngrok-free.dev",
+  BACKEND_URL: "https://samira-unavengeable-abrielle.ngrok-free.dev", 
 };
 
 export const SUPABASE = {

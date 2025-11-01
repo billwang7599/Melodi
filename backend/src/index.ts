@@ -1,10 +1,11 @@
 import dotenv from "dotenv";
 import express, { Application, Request, Response } from "express";
 import { initializeDatabase } from "./db";
+import analysisRoutes from "./routes/analysis";
 import authRoutes from "./routes/auth";
 import postsRoutes from "./routes/posts";
 import songsRoutes from "./routes/songs";
-import analysisRoutes from "./routes/analysis";
+import usersRoutes from "./routes/users";
 
 const cors = require("cors");
 
@@ -38,6 +39,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/songs", songsRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/analysis", analysisRoutes);
 
 const startServer = async () => {
