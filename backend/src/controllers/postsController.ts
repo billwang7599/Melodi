@@ -492,7 +492,7 @@ export const getCommentsByPostId = async (req: Request, res: Response) => {
                 users (
                     id,
                     display_name,
-                    username,
+                    username
                 )
             `)
             .eq('post_id', postId)
