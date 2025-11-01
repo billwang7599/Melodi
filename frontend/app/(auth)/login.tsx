@@ -51,7 +51,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const result = await signIn(email, password);
-      
+
       if (result.success) {
         router.replace("/(tabs)");
       } else {
@@ -68,7 +68,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const result = await signInWithSpotify();
-      
+
       if (!result.success) {
         Alert.alert("Error", result.error || "Failed to sign in with Spotify");
       }
@@ -85,7 +85,6 @@ export default function LoginScreen() {
       <ThemedText type="title" style={styles.title}>
         Welcome Back
       </ThemedText>
-      
       <TextInput
         style={[styles.input, errors.email ? styles.inputError : null]}
         placeholder="Email"
@@ -100,7 +99,6 @@ export default function LoginScreen() {
       {errors.email ? (
         <ThemedText style={styles.errorText}>{errors.email}</ThemedText>
       ) : null}
-
       <TextInput
         style={[styles.input, errors.password ? styles.inputError : null]}
         placeholder="Password"
@@ -114,9 +112,8 @@ export default function LoginScreen() {
       {errors.password ? (
         <ThemedText style={styles.errorText}>{errors.password}</ThemedText>
       ) : null}
-
-      <TouchableOpacity 
-        style={[styles.signInButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.signInButton, loading && styles.buttonDisabled]}
         onPress={handleSignIn}
         disabled={loading}
       >
@@ -124,15 +121,13 @@ export default function LoginScreen() {
           {loading ? "Signing In..." : "Sign In"}
         </ThemedText>
       </TouchableOpacity>
-
       <ThemedView style={styles.orContainer}>
         <ThemedView style={styles.orLine} />
         <ThemedText style={styles.orText}>OR</ThemedText>
         <ThemedView style={styles.orLine} />
       </ThemedView>
-
-      <TouchableOpacity 
-        style={[styles.spotifyButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.spotifyButton, loading && styles.buttonDisabled]}
         onPress={handleSpotifySignIn}
         disabled={loading}
       >
@@ -140,7 +135,6 @@ export default function LoginScreen() {
           {loading ? "Connecting..." : "Continue with Spotify"}
         </ThemedText>
       </TouchableOpacity>
-
       <ThemedView style={styles.linkContainer}>
         <ThemedText style={styles.linkText}>Don't have an account? </ThemedText>
         <Link href="/(auth)/signup" asChild>
@@ -162,24 +156,23 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 24,
-    textAlign: "center",
+    textAlign: "left",
   },
   input: {
     height: 50,
-    borderColor: "gray",
+    borderColor: "#DFDBC3",
     borderWidth: 1,
     borderRadius: 15,
     marginBottom: 8,
     paddingHorizontal: 16,
     color: "black",
-    backgroundColor: "white",
   },
   inputError: {
-    borderColor: "#FF6B6B",
+    borderColor: "#C86F67",
     borderWidth: 2,
   },
   errorText: {
-    color: "#FF6B6B",
+    color: "#C86F67",
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,

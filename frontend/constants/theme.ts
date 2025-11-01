@@ -5,19 +5,25 @@
 
 import { Platform } from "react-native";
 
-const palette = {
-  brandPrimary: "#6C5CE7",
-  brandPrimaryDark: "#A29BFE",
-  brandSecondary: "#00B894",
-  brandAccent: "#FDCB6E",
-  danger: "#FF6B6B",
-  success: "#2ECC71",
+export const palette = {
+  brandPrimary: "#05608F",
+  brandPrimaryDark: "#053B57",
+  brandSecondary: "#7996A5",
+  brandAccent: "#ACD5CD",
+  danger: "#C86F67",
+  success: "#8FCC8E",
+  brightAccent: "#E1BF6F",
+  lightButtonAccent: "#BAB8A9",
+  lightBorder: "#DFDBC3",
+  primaryText: "#303030",
+  secondaryText: "#515151",
+  mutedText: "#7B7B7B",
   light: {
     background: "#FDF9E0",
-    surface: "#FFFFFF",
+    surface: "#DFDBC3",
     text: "#1F1B36",
     textMuted: "#7996A5",
-    border: "#D9D4F0",
+    border: "#DFDBC3",
     icon: "#ACD5CD",
     shadow: "#05608F",
   },
@@ -76,7 +82,7 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: "https://tambra-unfeoffed-jessica.ngrok-free.dev", 
+  BACKEND_URL: "https://tambra-unfeoffed-jessica.ngrok-free.dev",
 };
 
 export const SUPABASE = {
