@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useSpotifyAPI } from '@/lib/spotify';
 import { feedStyles } from '@/styles/feedStyles';
-import { FeedPost, SelectedSong, SpotifyTrack } from '@/types/feed';
+import { Comment, FeedPost, SelectedSong, SpotifyTrack } from '@/types/feed';
 
 
 export default function FeedScreen() {
@@ -56,7 +56,30 @@ export default function FeedScreen() {
       }
       
       const data = await response.json();
-      setFeedData(data.posts || []);
+      const posts = data.posts || [];
+      
+      // Fetch comments for each post
+      const postsWithComments = await Promise.all(
+        posts.map(async (post: FeedPost) => {
+          try {
+            const commentsResponse = await fetch(
+              `${API.BACKEND_URL}/api/posts/${post.post_id}/comments`,
+              { headers }
+            );
+            
+            if (commentsResponse.ok) {
+              const commentsData = await commentsResponse.json();
+              return { ...post, comments: commentsData.comments || [] };
+            }
+            return { ...post, comments: [] };
+          } catch (err) {
+            console.error(`Error fetching comments for post ${post.post_id}:`, err);
+            return { ...post, comments: [] };
+          }
+        })
+      );
+      
+      setFeedData(postsWithComments);
     } catch (err) {
       console.error('Error fetching posts:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch posts');
@@ -82,6 +105,19 @@ export default function FeedScreen() {
   const handleComment = (postId: number) => {
     // Navigate to comments or show comment modal
     console.log('Navigate to comments for post:', postId);
+  };
+
+  const handleCommentAdded = (postId: number, comment: Comment) => {
+    setFeedData(prevData =>
+      prevData.map(post =>
+        post.post_id === postId
+          ? { 
+              ...post, 
+              comments: [...(post.comments || []), comment]
+            }
+          : post
+      )
+    );
   };
 
   const handleCreatePost = async () => {
@@ -224,6 +260,7 @@ export default function FeedScreen() {
                 post={post}
                 onLike={handleLike}
                 onComment={handleComment}
+                onCommentAdded={handleCommentAdded}
                 surfaceColor={surfaceColor}
                 mutedColor={mutedColor}
                 primaryColor={primaryColor}

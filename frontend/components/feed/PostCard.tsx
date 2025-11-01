@@ -2,15 +2,18 @@ import { ThemedText } from '@/components/themed-text';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { postCardStyles } from '@/styles/postCardStyles';
-import { FeedPost } from '@/types/feed';
+import { Comment, FeedPost } from '@/types/feed';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Alert, TouchableOpacity, View } from 'react-native';
+import { CommentInput } from './CommentInput';
+import { CommentsList } from './CommentsList';
 
 interface PostCardProps {
   post: FeedPost;
   onLike: (postId: number, newLikeCount: number, isLiked: boolean) => void;
   onComment: (postId: number) => void;
+  onCommentAdded: (postId: number, comment: Comment) => void;
   surfaceColor: string;
   mutedColor: string;
   primaryColor: string;
@@ -21,12 +24,14 @@ export function PostCard({
   post, 
   onLike, 
   onComment, 
+  onCommentAdded,
   surfaceColor, 
   mutedColor, 
   primaryColor,
   authToken
 }: PostCardProps) {
   const [isLiking, setIsLiking] = useState(false);
+  const [showCommentInput, setShowCommentInput] = useState(false);
   
   // Use the isLiked field directly from the API response
   const isLiked = post.isLiked || false;
@@ -67,6 +72,51 @@ export function PostCard({
     } finally {
       setIsLiking(false);
     }
+  };
+
+  const handleCommentSubmit = async (body: string) => {
+    if (!authToken) {
+      Alert.alert('Error', 'You must be logged in to comment');
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const response = await fetch(`${API.BACKEND_URL}/api/posts/${post.post_id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify({ body })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to create comment`);
+      }
+
+      const result = await response.json();
+      
+      // Call the parent's onCommentAdded callback with the new comment
+      onCommentAdded(post.post_id, result.comment);
+      
+      // Hide the comment input after successful submission
+      setShowCommentInput(false);
+    } catch (error) {
+      console.error('Error creating comment:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create comment');
+      throw error;
+    }
+  };
+
+  const handleCommentButtonClick = () => {
+    if (!authToken) {
+      Alert.alert('Error', 'You must be logged in to comment');
+      return;
+    }
+    setShowCommentInput(!showCommentInput);
+    onComment(post.post_id);
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -154,10 +204,16 @@ export function PostCard({
           
           <TouchableOpacity
             style={postCardStyles.actionButton}
-            onPress={() => onComment(post.post_id)}
+            onPress={handleCommentButtonClick}
           >
-            <IconSymbol name="bubble.left" size={24} color={mutedColor} />
-            <ThemedText style={postCardStyles.actionCount}>0</ThemedText>
+            <IconSymbol 
+              name="bubble.left" 
+              size={24} 
+              color={showCommentInput ? primaryColor : mutedColor} 
+            />
+            <ThemedText style={postCardStyles.actionCount}>
+              {post.comments?.length || 0}
+            </ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -170,6 +226,21 @@ export function PostCard({
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Comment Input */}
+      {showCommentInput && (
+        <CommentInput
+          onSubmit={handleCommentSubmit}
+          mutedColor={mutedColor}
+          primaryColor={primaryColor}
+          surfaceColor={surfaceColor}
+        />
+      )}
+
+      {/* Comments Section */}
+      {post.comments && post.comments.length > 0 && (
+        <CommentsList comments={post.comments} mutedColor={mutedColor} />
+      )}
     </View>
   );
 }

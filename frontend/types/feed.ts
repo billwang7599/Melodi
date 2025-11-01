@@ -1,3 +1,16 @@
+export interface Comment {
+  id: string;
+  created_at: string;
+  post_id: number;
+  body: string;
+  user_id: string;
+  users: {
+    id: string;
+    username: string;
+    display_name: string | null;
+  };
+}
+
 export interface FeedPost {
   post_id: number;
   user_id: string;
@@ -7,6 +20,7 @@ export interface FeedPost {
   created_at: string;
   updated_at: string;
   isLiked?: boolean;
+  comments?: Comment[];
   users: {
     id: string;
     username: string;
