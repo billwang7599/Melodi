@@ -74,7 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Small delay to ensure state is updated
         setTimeout(() => {
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/feed');
         }, 100);
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out, navigating to login');
