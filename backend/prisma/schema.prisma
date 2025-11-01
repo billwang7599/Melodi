@@ -15,9 +15,6 @@ model User {
   displayName                           String?  @map("display_name")
   spotifyId                             String?  @map("spotify_id")
   createdAt                             DateTime @default(now()) @map("created_at")
-  bio                                   String?
-  favoriteGenres                        String?  @map("favorite_genres")
-  isPublic                              Boolean  @default(true) @map("is_public")
   friends_friends_action_user_idTousers Friend[] @relation("friends_action_user_idTousers")
   friends_friends_user_one_idTousers    Friend[] @relation("friends_user_one_idTousers")
   friends_friends_user_two_idTousers    Friend[] @relation("friends_user_two_idTousers")
@@ -59,15 +56,19 @@ model Post {
 }
 
 model Song {
-  songId      BigInt     @id @default(autoincrement()) @map("song_id")
-  spotifyId   String     @unique @map("spotify_id")
-  songName    String     @map("song_name")
-  artistName  String     @map("artist_name")
-  albumName   String?    @map("album_name")
-  coverArtUrl String?    @map("cover_art_url")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  posts       Post[]
-  song_data   song_data?
+  songId        BigInt   @id @default(autoincrement()) @map("song_id")
+  spotifyId     String   @unique @map("spotify_id")
+  songName      String   @map("song_name")
+  artistName    String   @map("artist_name")
+  albumName     String?  @map("album_name")
+  coverArtUrl   String?  @map("cover_art_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  valence       Decimal? @db.Decimal
+  arousal       Decimal? @db.Decimal
+  analysis      Json?
+  embedding     Json?
+  va_prediction Json?
+  posts         Post[]
 
   @@map("songs")
 }
@@ -81,18 +82,6 @@ model Like {
 
   @@id([user_id, post_id])
   @@map("likes")
-}
-
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model song_data {
-  song_id       BigInt   @id @unique
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  valence       Decimal? @db.Decimal
-  arousal       Decimal? @db.Decimal
-  va_prediction Json?
-  embedding     Json?
-  analysis      Json?
-  songs         Song     @relation(fields: [song_id], references: [songId], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum FriendshipStatus {
