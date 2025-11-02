@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -53,9 +54,9 @@ interface ListeningStats {
 interface SpotifyTrack {
   id: string;
   name: string;
-  artists: Array<{ name: string }>;
+  artists: { name: string }[];
   album: {
-    images: Array<{ url: string }>;
+    images: { url: string }[];
   };
   duration_ms?: number;
 }
@@ -63,7 +64,7 @@ interface SpotifyTrack {
 interface SpotifyArtist {
   id: string;
   name: string;
-  images: Array<{ url: string }>;
+  images: { url: string }[];
   genres: string[];
 }
 
@@ -75,6 +76,7 @@ interface SongAnalysis {
 }
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user, signOut } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const mutedColor = useThemeColor({}, 'textMuted');
@@ -461,7 +463,7 @@ export default function ProfileScreen() {
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top + 30 }]}>
           <ThemedText style={styles.headerTitle}>Profile</ThemedText>
           <View style={styles.headerActions}>
             <TouchableOpacity 
@@ -751,6 +753,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
+    lineHeight: 34,
   },
   headerActions: {
     flexDirection: 'row',
