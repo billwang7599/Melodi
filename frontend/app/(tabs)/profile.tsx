@@ -404,18 +404,44 @@ export default function ProfileScreen() {
     const loadInitialProfileData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with real API calls for profile stats (posts, followers, following)
-        // For now, keep mock data for social stats
-        setProfileStats({
-          totalPosts: 42,
-          totalFollowers: 128,
-          totalFollowing: 89,
-        });
+        if (user?.id) {
+          // Fetch real profile stats from backend
+          const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${user.id}`, {
+            headers: {
+              'ngrok-skip-browser-warning': 'true',
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user?.stats) {
+              setProfileStats({
+                totalPosts: data.user.stats.totalPosts || 0,
+                totalFollowers: data.user.stats.totalFollowers || 0,
+                totalFollowing: data.user.stats.totalFollowing || 0,
+              });
+            }
+          } else {
+            console.error('Failed to fetch profile stats:', response.status);
+            // Set default values if fetch fails
+            setProfileStats({
+              totalPosts: 0,
+              totalFollowers: 0,
+              totalFollowing: 0,
+            });
+          }
+        }
 
         // Load initial music data which will also set listening stats
         await loadMusicData('medium_term');
       } catch (error) {
         console.error('Error loading initial profile data:', error);
+        // Set default values on error
+        setProfileStats({
+          totalPosts: 0,
+          totalFollowers: 0,
+          totalFollowing: 0,
+        });
       } finally {
         setLoading(false);
       }
@@ -424,7 +450,7 @@ export default function ProfileScreen() {
     if (user) {
       loadInitialProfileData();
     }
-  }, [user]);
+  }, [user, loadMusicData]);
 
   // handle time range changes
   const handleTimeRangeChange = async (timeRange: 'short_term' | 'medium_term' | 'long_term') => {
@@ -506,15 +532,21 @@ export default function ProfileScreen() {
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => user?.id && router.push(`/followers?userId=${user.id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => user?.id && router.push(`/following?userId=${user.id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowing}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Following</ThemedText>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Edit Profile Button */}
