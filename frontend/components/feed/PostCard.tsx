@@ -1,13 +1,13 @@
-import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API } from '@/constants/theme';
-import { postCardStyles } from '@/styles/postCardStyles';
-import { Comment, FeedPost } from '@/types/feed';
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Alert, TouchableOpacity, View } from 'react-native';
-import { CommentInput } from './CommentInput';
-import { CommentsList } from './CommentsList';
+import { SpotifyEmbed } from "@/components/feed/SpotifyEmbed";
+import { ThemedText } from "@/components/themed-text";
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { API } from "@/constants/theme";
+import { postCardStyles } from "@/styles/postCardStyles";
+import { Comment, FeedPost } from "@/types/feed";
+import { useState } from "react";
+import { Alert, TouchableOpacity, View } from "react-native";
+import { CommentInput } from "./CommentInput";
+import { CommentsList } from "./CommentsList";
 
 interface PostCardProps {
   post: FeedPost;
@@ -20,25 +20,25 @@ interface PostCardProps {
   authToken?: string;
 }
 
-export function PostCard({ 
-  post, 
-  onLike, 
-  onComment, 
+export function PostCard({
+  post,
+  onLike,
+  onComment,
   onCommentAdded,
-  surfaceColor, 
-  mutedColor, 
+  surfaceColor,
+  mutedColor,
   primaryColor,
-  authToken
+  authToken,
 }: PostCardProps) {
   const [isLiking, setIsLiking] = useState(false);
   const [showCommentInput, setShowCommentInput] = useState(false);
-  
+
   // Use the isLiked field directly from the API response
   const isLiked = post.isLiked || false;
 
   const handleLike = async () => {
     if (!authToken) {
-      Alert.alert('Error', 'You must be logged in to like posts');
+      Alert.alert("Error", "You must be logged in to like posts");
       return;
     }
 
@@ -46,29 +46,36 @@ export function PostCard({
 
     try {
       setIsLiking(true);
-      
-      const response = await fetch(`${API.BACKEND_URL}/api/posts/${post.post_id}/like`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-          'ngrok-skip-browser-warning': 'true'
+
+      const response = await fetch(
+        `${API.BACKEND_URL}/api/posts/${post.post_id}/like`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+            "ngrok-skip-browser-warning": "true",
+          },
         }
-      });
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: Failed to like post`);
+        throw new Error(
+          errorData.message || `HTTP ${response.status}: Failed to like post`
+        );
       }
 
       const result = await response.json();
-      
+
       // Call the parent's onLike callback with the new like count and like status
       onLike(post.post_id, result.likeCount, result.isLiked);
-      
     } catch (error) {
-      console.error('Error liking post:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to like post');
+      console.error("Error liking post:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to like post"
+      );
     } finally {
       setIsLiking(false);
     }
@@ -76,43 +83,52 @@ export function PostCard({
 
   const handleCommentSubmit = async (body: string) => {
     if (!authToken) {
-      Alert.alert('Error', 'You must be logged in to comment');
-      throw new Error('Not authenticated');
+      Alert.alert("Error", "You must be logged in to comment");
+      throw new Error("Not authenticated");
     }
 
     try {
-      const response = await fetch(`${API.BACKEND_URL}/api/posts/${post.post_id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({ body })
-      });
+      const response = await fetch(
+        `${API.BACKEND_URL}/api/posts/${post.post_id}/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+          body: JSON.stringify({ body }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: Failed to create comment`);
+        throw new Error(
+          errorData.message ||
+            `HTTP ${response.status}: Failed to create comment`
+        );
       }
 
       const result = await response.json();
-      
+
       // Call the parent's onCommentAdded callback with the new comment
       onCommentAdded(post.post_id, result.comment);
-      
+
       // Hide the comment input after successful submission
       setShowCommentInput(false);
     } catch (error) {
-      console.error('Error creating comment:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create comment');
+      console.error("Error creating comment:", error);
+      Alert.alert(
+        "Error",
+        error instanceof Error ? error.message : "Failed to create comment"
+      );
       throw error;
     }
   };
 
   const handleCommentButtonClick = () => {
     if (!authToken) {
-      Alert.alert('Error', 'You must be logged in to comment');
+      Alert.alert("Error", "You must be logged in to comment");
       return;
     }
     setShowCommentInput(!showCommentInput);
@@ -123,9 +139,9 @@ export function PostCard({
     const date = new Date(timestamp);
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diffInSeconds < 60) {
-      return 'Just now';
+      return "Just now";
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60);
       return `${minutes}m ago`;
@@ -139,35 +155,40 @@ export function PostCard({
   };
 
   return (
-    <View style={[postCardStyles.postContainer, { backgroundColor: surfaceColor }]}>
+    <View
+      style={[postCardStyles.postContainer, { backgroundColor: surfaceColor }]}
+    >
       {/* User Header */}
       <View style={postCardStyles.userHeader}>
         <View style={postCardStyles.avatarPlaceholder}>
           <IconSymbol name="person.circle.fill" size={40} color={mutedColor} />
         </View>
         <ThemedText style={postCardStyles.listeningText}>
-          <ThemedText style={postCardStyles.username}>@{post.users.username}</ThemedText>
-          {' is listening to'}
+          <ThemedText style={postCardStyles.username}>
+            @{post.users.username}
+          </ThemedText>
+          {" is listening to"}
         </ThemedText>
       </View>
 
       {/* Song Card with cream/beige background */}
-      <View style={postCardStyles.songCardContainer}>
-        <View style={postCardStyles.songCardTop}>
-          {/* Large Album Art */}
+
+      {post.songs.song_id && (
+        <SpotifyEmbed trackId={post.songs.spotify_id || ""} />
+      )}
+      <ThemedText style={postCardStyles.description}>{post.content}</ThemedText>
+      {/* <View style={postCardStyles.songCardTop}>
           <Image
             source={{ uri: post.songs.cover_art_url || 'https://via.placeholder.com/120' }}
             style={postCardStyles.largeAlbumArt}
           />
           
-          {/* Song Info beside artwork */}
           <View style={postCardStyles.songInfoBeside}>
             <ThemedText style={postCardStyles.songTitleLarge}>{post.songs.song_name}</ThemedText>
             <ThemedText style={postCardStyles.artistName}>{post.songs.artist_name}</ThemedText>
           </View>
         </View>
 
-        {/* Play Controls */}
         <View style={postCardStyles.playControls}>
           <TouchableOpacity style={postCardStyles.playButton}>
             <IconSymbol name="play.fill" size={14} color={primaryColor} />
@@ -180,11 +201,9 @@ export function PostCard({
           </View>
         </View>
 
-        {/* Description */}
         <ThemedText style={postCardStyles.description}>
           {post.content}
-        </ThemedText>
-      </View>
+        </ThemedText> */}
 
       {/* Action Buttons */}
       <View style={postCardStyles.actionsContainer}>
@@ -194,22 +213,24 @@ export function PostCard({
             onPress={handleLike}
             disabled={isLiking}
           >
-            <IconSymbol 
-              name={isLiked ? "heart.fill" : "heart"} 
-              size={24} 
-              color={isLiked ? primaryColor : mutedColor} 
+            <IconSymbol
+              name={isLiked ? "heart.fill" : "heart"}
+              size={24}
+              color={isLiked ? primaryColor : mutedColor}
             />
-            <ThemedText style={postCardStyles.actionCount}>{post.like_count}</ThemedText>
+            <ThemedText style={postCardStyles.actionCount}>
+              {post.like_count}
+            </ThemedText>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={postCardStyles.actionButton}
             onPress={handleCommentButtonClick}
           >
-            <IconSymbol 
-              name="bubble.left" 
-              size={24} 
-              color={showCommentInput ? primaryColor : mutedColor} 
+            <IconSymbol
+              name="bubble.left"
+              size={24}
+              color={showCommentInput ? primaryColor : mutedColor}
             />
             <ThemedText style={postCardStyles.actionCount}>
               {post.comments?.length || 0}
