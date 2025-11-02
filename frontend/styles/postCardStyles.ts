@@ -116,6 +116,7 @@ export const postCardStyles = StyleSheet.create({
   },
   description: {
     paddingVertical: 8,
+    paddingHorizontal: 6,
     fontSize: 13,
     lineHeight: 20,
     color: "#4B5563",

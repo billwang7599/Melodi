@@ -252,7 +252,6 @@ export function PostCard({
           onSubmit={handleCommentSubmit}
           mutedColor={mutedColor}
           primaryColor={primaryColor}
-          surfaceColor={surfaceColor}
         />
       )}
 
