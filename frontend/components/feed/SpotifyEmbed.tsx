@@ -1,5 +1,5 @@
-import { WebView } from "react-native-webview";
 import { StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
 
 interface SpotifyEmbedProps {
   trackId: string;
@@ -14,7 +14,7 @@ export function SpotifyEmbed({ trackId, height = 152 }: SpotifyEmbedProps) {
       </head>
       <body style="margin:0;padding:0;">
         <iframe
-          src="https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0"
+          src="https://open.spotify.com/embed/track/${trackId}?utm_source=generator"
           width="100%"
           height="${height}"
           frameBorder="0"

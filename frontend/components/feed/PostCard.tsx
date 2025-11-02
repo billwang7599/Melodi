@@ -155,9 +155,7 @@ export function PostCard({
   };
 
   return (
-    <View
-      style={[postCardStyles.postContainer, { backgroundColor: surfaceColor }]}
-    >
+    <View style={[postCardStyles.postContainer]}>
       {/* User Header */}
       <View style={postCardStyles.userHeader}>
         <View style={postCardStyles.avatarPlaceholder}>
