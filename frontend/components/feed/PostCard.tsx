@@ -161,12 +161,17 @@ export function PostCard({
         <View style={postCardStyles.avatarPlaceholder}>
           <IconSymbol name="person.circle.fill" size={40} color={mutedColor} />
         </View>
-        <ThemedText style={postCardStyles.listeningText}>
-          <ThemedText style={postCardStyles.username}>
-            @{post.users.username}
+        <View style={postCardStyles.headerTextContainer}>
+          <ThemedText style={postCardStyles.timestamp}>
+            {formatTimestamp(post.created_at)}
           </ThemedText>
-          {" is listening to"}
-        </ThemedText>
+          <ThemedText style={postCardStyles.listeningText}>
+            <ThemedText style={postCardStyles.username}>
+              @{post.users.username}
+            </ThemedText>
+            {" is listening to"}
+          </ThemedText>
+        </View>
       </View>
 
       {/* Song Card with cream/beige background */}

@@ -10,12 +10,6 @@ export const postCardStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  userHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 12,
-  },
   avatarPlaceholder: {
     width: 56,
     height: 56,
@@ -24,13 +18,28 @@ export const postCardStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  listeningText: {
-    fontSize: 14,
+  userHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+    gap: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  timestamp: {
+    fontSize: 12,
     color: "#6B7280",
   },
   username: {
     fontWeight: "600",
     color: "#1F2937",
+  },
+  listeningText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#6B7280",
   },
   songCardContainer: {
     backgroundColor: "#D6D3D1",
