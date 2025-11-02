@@ -359,3 +359,163 @@ export const toggleLike = async (req: AuthRequest, res: Response) => {
         });
     }
 };
+
+// Create a new comment on a post
+export const createComment = async (req: AuthRequest, res: Response) => {
+    try {
+        const { postId } = req.params;
+        const { body } = req.body;
+        const userId = req.userId; // Get user ID from authenticated request
+
+        // Validate required fields
+        if (!userId) {
+            return res.status(401).json({ 
+                message: 'Authentication required' 
+            });
+        }
+
+        if (!body || body.trim() === '') {
+            return res.status(400).json({ 
+                message: 'Comment body is required' 
+            });
+        }
+
+        if (!postId) {
+            return res.status(400).json({ 
+                message: 'Post ID is required' 
+            });
+        }
+
+        const supabase = await getDatabase();
+
+        // Verify user exists
+        const { data: user } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', userId)
+            .single();
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Verify post exists
+        const { data: post } = await supabase
+            .from('posts')
+            .select('post_id')
+            .eq('post_id', postId)
+            .single();
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Create the comment
+        const { data: newComment, error } = await supabase
+            .from('comments')
+            .insert([
+                {
+                    post_id: parseInt(postId),
+                    body: body.trim(),
+                    user_id: userId
+                }
+            ])
+            .select(`
+                id,
+                created_at,
+                post_id,
+                body,
+                user_id,
+                users (
+                    id,
+                    display_name,
+                    username
+                )
+            `)
+            .single();
+
+        if (error) {
+            console.error('Error creating comment:', error);
+            return res.status(500).json({ 
+                message: 'Failed to create comment',
+                error: error.message 
+            });
+        }
+
+        return res.status(201).json({
+            message: 'Comment created successfully',
+            comment: newComment
+        });
+
+    } catch (error) {
+        console.error('Error in createComment:', error);
+        return res.status(500).json({ 
+            message: 'Internal server error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};
+
+// Get all comments for a specific post
+export const getCommentsByPostId = async (req: Request, res: Response) => {
+    try {
+        const { postId } = req.params;
+
+        if (!postId) {
+            return res.status(400).json({ 
+                message: 'Post ID is required' 
+            });
+        }
+
+        const supabase = await getDatabase();
+
+        // Verify post exists
+        const { data: post } = await supabase
+            .from('posts')
+            .select('post_id')
+            .eq('post_id', postId)
+            .single();
+
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+
+        // Get all comments for the post
+        const { data: comments, error } = await supabase
+            .from('comments')
+            .select(`
+                id,
+                created_at,
+                post_id,
+                body,
+                user_id,
+                users (
+                    id,
+                    display_name,
+                    username
+                )
+            `)
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching comments:', error);
+            return res.status(500).json({ 
+                message: 'Failed to fetch comments',
+                error: error.message 
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Comments retrieved successfully',
+            comments: comments || []
+        });
+
+    } catch (error) {
+        console.error('Error in getCommentsByPostId:', error);
+        return res.status(500).json({ 
+            message: 'Internal server error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};

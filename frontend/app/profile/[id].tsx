@@ -2,12 +2,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { PostCard } from '@/components/feed/PostCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { FeedPost } from '@/types/feed';
 
 interface UserProfile {
   id: string;
@@ -35,6 +37,8 @@ export default function PublicProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -98,6 +102,73 @@ export default function PublicProfileScreen() {
     }
   }, [id, token, user]);
 
+  // Fetch user posts
+  useEffect(() => {
+    const loadUserPosts = async () => {
+      if (!id) return;
+      
+      setPostsLoading(true);
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API.BACKEND_URL}/api/posts/user/${id}`, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('User posts loaded:', result);
+        
+        // Transform the posts to match FeedPost interface
+        const transformedPosts: FeedPost[] = (result.posts || []).map((post: any) => ({
+          post_id: post.post_id,
+          user_id: post.user_id,
+          content: post.content,
+          like_count: post.like_count || 0,
+          visibility: post.visibility,
+          created_at: post.created_at,
+          updated_at: post.updated_at,
+          isLiked: false, // Will be updated if user is authenticated
+          users: {
+            id: post.users?.id || post.user_id,
+            username: post.users?.username || '',
+            display_name: post.users?.display_name || null,
+          },
+          songs: {
+            song_id: post.songs?.song_id?.toString() || '',
+            spotify_id: post.songs?.spotify_id || '',
+            song_name: post.songs?.song_name || '',
+            artist_name: post.songs?.artist_name || '',
+            album_name: post.songs?.album_name || null,
+            cover_art_url: post.songs?.cover_art_url || null,
+          },
+        }));
+
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Error loading user posts:', error);
+        setPosts([]);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    if (userProfile) {
+      loadUserPosts();
+    }
+  }, [id, userProfile, token]);
+
   const handleFollow = async () => {
     if (!token) {
       return;
@@ -145,6 +216,21 @@ export default function PublicProfileScreen() {
       // Revert optimistic update
       setIsFollowing(wasFollowing);
     }
+  };
+
+  const handleLike = (postId: number, newLikeCount: number, isLiked: boolean) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, like_count: newLikeCount, isLiked: isLiked }
+          : post
+      )
+    );
+  };
+
+  const handleComment = (postId: number) => {
+    // Navigate to comments or show comment modal
+    console.log('Navigate to comments for post:', postId);
   };
 
   const isOwnProfile = user?.id === id;
@@ -297,6 +383,38 @@ export default function PublicProfileScreen() {
           )}
         </View>
 
+        {/* Posts Section */}
+        <View style={styles.postsSection}>
+          <ThemedText style={styles.postsSectionTitle}>Posts</ThemedText>
+          {postsLoading ? (
+            <View style={styles.postsLoadingContainer}>
+              <ActivityIndicator size="small" color={primaryColor} />
+            </View>
+          ) : posts.length === 0 ? (
+            <View style={styles.emptyPostsContainer}>
+              <IconSymbol name="music.note" size={48} color={mutedColor} style={styles.emptyPostsIcon} />
+              <ThemedText style={[styles.emptyPostsText, { color: mutedColor }]}>
+                No posts yet
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={styles.postsList}>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.post_id}
+                  post={post}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  surfaceColor={surfaceColor}
+                  mutedColor={mutedColor}
+                  primaryColor={primaryColor}
+                  authToken={token}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.bottomPadding} />
       </ScrollView>
     </ThemedView>
@@ -444,5 +562,34 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  postsSection: {
+    marginTop: 24,
+    marginHorizontal: 16,
+  },
+  postsSectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  postsLoadingContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyPostsContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyPostsIcon: {
+    marginBottom: 12,
+    opacity: 0.4,
+  },
+  emptyPostsText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  postsList: {
+    gap: 16,
   },
 });

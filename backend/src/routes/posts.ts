@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createPost, getAllPosts, getPostsByUserId, toggleLike } from '../controllers/postsController';
+import { createComment, createPost, getAllPosts, getCommentsByPostId, getPostsByUserId, toggleLike } from '../controllers/postsController';
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -15,5 +15,11 @@ router.get('/', optionalAuthenticateToken, getAllPosts);
 
 // Like or unlike a post (protected route - requires authentication)
 router.post('/:postId/like', authenticateToken, toggleLike);
+
+// Create a new comment on a post (protected route - requires authentication)
+router.post('/:postId/comments', authenticateToken, createComment);
+
+// Get all comments for a specific post (public route)
+router.get('/:postId/comments', getCommentsByPostId);
 
 export default router;

@@ -44,7 +44,7 @@ async function getAccessTokenOrKick(): Promise<string | null> {
   const accessToken = await AsyncStorage.getItem("token");
   if (!accessToken) {
     Alert.alert("Error", "No access token found. Please login again.");
-    router.replace("/(tabs)");
+    router.replace("/(tabs)/feed");
     return null;
   }
   return accessToken;
@@ -151,7 +151,7 @@ export default function DashboardScreen() {
   const logout = useCallback(async () => {
     try {
       await AsyncStorage.multiRemove(["token", "expirationDate"]);
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/feed");
     } catch (error) {
       console.error("Error during logout:", error);
     }
