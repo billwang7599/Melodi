@@ -10,7 +10,9 @@ import usersRoutes from "./routes/users";
 
 const cors = require("cors");
 
-const allowedOrigins = ["http://localhost:8081"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : ["http://localhost:8081"];
 
 dotenv.config();
 
