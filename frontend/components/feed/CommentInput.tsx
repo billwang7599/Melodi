@@ -12,12 +12,16 @@ interface CommentInputProps {
   onSubmit: (body: string) => Promise<void>;
   mutedColor: string;
   primaryColor: string;
+  textColor: string;
+  borderColor: string;
 }
 
 export function CommentInput({
   onSubmit,
   mutedColor,
   primaryColor,
+  textColor,
+  borderColor,
 }: CommentInputProps) {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,10 +44,10 @@ export function CommentInput({
 
   return (
     <View style={[styles.container]}>
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { borderColor }]}>
         <IconSymbol name="person.circle.fill" size={32} color={mutedColor} />
         <TextInput
-          style={[styles.input, { color: "#000" }]}
+          style={[styles.input, { color: textColor }]}
           placeholder="Write a comment..."
           placeholderTextColor={mutedColor}
           value={commentText}
@@ -87,7 +91,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    borderColor: "#DFDBC3",
     borderWidth: 2,
     borderRadius: 20,
     paddingHorizontal: 12,

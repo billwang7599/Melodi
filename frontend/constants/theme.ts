@@ -6,35 +6,34 @@
 import { Platform } from "react-native";
 
 export const palette = {
-  brandPrimary: "#05608F",
-  brandPrimaryDark: "#053B57",
-  brandSecondary: "#7996A5",
-  brandAccent: "#ACD5CD",
-  danger: "#C86F67",
-  success: "#8FCC8E",
-  brightAccent: "#E1BF6F",
-  lightButtonAccent: "#BAB8A9",
-  lightBorder: "#DFDBC3",
-  primaryText: "#303030",
-  secondaryText: "#515151",
-  mutedText: "#7B7B7B",
+  // Brand Colors
+  brandPrimary: "#7996A5",
+  brandPrimaryDark: "#124B67",
+  brandSecondary: "#092838",
+  brandAccent: "#9DBBBC",
+  danger: "#c32323ff",
+  success: "#33d772ff",
+  warning: "#F59E0B",
+
   light: {
-    background: "#FDF9E0",
-    surface: "#DFDBC3",
-    text: "#1F1B36",
-    textMuted: "#7996A5",
-    border: "#DFDBC3",
-    icon: "#ACD5CD",
-    shadow: "#05608F",
+    background: "#fffefe", // Off-white background
+    surface: "#ebebebff", // Very light gray
+    surfaceElevated: "#FFFFFF", // White elevated surfaces
+    text: "#111827", // Almost black for high contrast
+    textMuted: "#6B7280", // Medium gray
+    border: "#bcbcbcff", // Light gray border
+    icon: "#9DBBBC", // Purple icons
+    shadow: "rgba(0, 0, 0, 0.1)",
   },
   dark: {
-    background: "#0F0B20",
-    surface: "#1C1633",
-    text: "#F1EDFF",
-    textMuted: "#B0A9D6",
-    border: "#3E365D",
-    icon: "#B0A9D6",
-    shadow: "#000000",
+    background: "#0A1420", // Deep navy blue - sleek dark
+    surface: "#132030", // Slightly lighter navy
+    surfaceElevated: "#1A2838", // Elevated navy blue
+    text: "#E8F4F8", // Soft white with blue tint
+    textMuted: "#7996A5", // Brand primary color for muted text
+    border: "#1A2838", // Subtle navy border
+    icon: "#9DBBBC", // Brand accent for icons
+    shadow: "rgba(0, 0, 0, 0.6)",
   },
 };
 
@@ -44,45 +43,49 @@ export const Colors = {
     textMuted: palette.light.textMuted,
     background: palette.light.background,
     surface: palette.light.surface,
+    surfaceElevated: palette.light.surfaceElevated,
     border: palette.light.border,
-    tint: "#7996A5",
-    primary: "#7996A5",
-    primaryMuted: "#DDD7FF",
+    tint: palette.brandPrimary,
+    primary: palette.brandPrimary,
+    primaryMuted: "#EDE9FE",
     secondary: palette.brandSecondary,
     accent: palette.brandAccent,
     success: palette.success,
     danger: palette.danger,
+    warning: palette.warning,
     icon: palette.light.icon,
     shadow: palette.light.shadow,
-    inputBackground: palette.light.surface,
-    inputBorder: "#C6C0E0",
+    inputBackground: "#F9FAFB", // Light gray
+    inputBorder: "#D1D5DB", // Gray 300
     tabIconDefault: palette.light.textMuted,
-    tabIconSelected: "#7996A5",
+    tabIconSelected: palette.brandPrimary,
   },
   dark: {
-    text: palette.dark.text,
-    textMuted: palette.dark.textMuted,
-    background: palette.dark.background,
-    surface: palette.dark.surface,
-    border: palette.dark.border,
-    tint: "#7996A5",
-    primary: "#7996A5",
-    primaryMuted: "#3B3362",
-    secondary: "#55EFC4",
-    accent: "#FFD479",
-    success: palette.success,
-    danger: palette.danger,
-    icon: palette.dark.icon,
-    shadow: palette.dark.shadow,
-    inputBackground: "#24203C",
-    inputBorder: "#4C436B",
-    tabIconDefault: palette.dark.textMuted,
-    tabIconSelected: "#7996A5",
+    text: "#E8F4F8", // Soft white with blue tint
+    textMuted: "#7996A5", // Brand primary - muted blue
+    background: "#0A1420", // Deep navy blue
+    surface: "#132030", // Slightly lighter navy
+    surfaceElevated: "#1A2838", // Elevated navy
+    border: "#1A2838", // Subtle navy border
+    tint: "#9DBBBC", // Brand accent - muted teal
+    primary: "#7996A5", // Brand primary - muted blue
+    primaryMuted: "#124B67", // Deeper brand blue
+    secondary: "#9DBBBC", // Brand accent - muted teal
+    accent: "#B8D4DE", // Lighter teal for highlights
+    success: "#33d772ff",
+    danger: "#c32323ff",
+    warning: "#F59E0B",
+    icon: "#9DBBBC", // Brand accent
+    shadow: "rgba(0, 0, 0, 0.6)",
+    inputBackground: "#132030", // Navy surface
+    inputBorder: "#1A2838", // Subtle border
+    tabIconDefault: "#7996A5", // Brand primary
+    tabIconSelected: "#9DBBBC", // Brand accent
   },
 };
 
 export const API = {
-  BACKEND_URL: "https://bc89f0268178.ngrok-free.app",
+  BACKEND_URL: "https://9c21905964da.ngrok-free.app",
 };
 
 export const SUPABASE = {

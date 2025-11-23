@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { createPostStyles } from "@/styles/createPostStyles";
 import { SelectedSong } from "@/types/feed";
 import {
@@ -20,6 +21,9 @@ interface CreatePostFormProps {
   mutedColor: string;
   primaryColor: string;
   surfaceColor: string;
+  textColor: string;
+  borderColor: string;
+  accentColor: string;
 }
 
 export function CreatePostForm({
@@ -33,23 +37,28 @@ export function CreatePostForm({
   mutedColor,
   primaryColor,
   surfaceColor,
+  textColor,
+  borderColor,
+  accentColor,
 }: CreatePostFormProps) {
+  const shadowColor = useThemeColor({}, 'shadow');
+
   return (
     <View
       style={[
         createPostStyles.createPostContainer,
-        { backgroundColor: surfaceColor },
+        { backgroundColor: surfaceColor, shadowColor },
       ]}
     >
       {selectedSong ? (
-        <View style={[createPostStyles.selectedSongContainer]}>
+        <View style={[createPostStyles.selectedSongContainer, { backgroundColor: accentColor }]}>
           <View style={createPostStyles.songInfoRow}>
             <IconSymbol name="music.note" size={18} color={primaryColor} />
             <View style={createPostStyles.songTextContainer}>
               <ThemedText style={createPostStyles.selectedSongName}>
                 {selectedSong.name}
               </ThemedText>
-              <ThemedText style={createPostStyles.selectedSongArtist}>
+              <ThemedText style={[createPostStyles.selectedSongArtist, { color: mutedColor }]}>
                 {selectedSong.artist}
               </ThemedText>
             </View>
@@ -65,13 +74,13 @@ export function CreatePostForm({
         <TouchableOpacity
           style={[
             createPostStyles.selectSongButton,
-            { backgroundColor: "#ACD5CD" },
+            { backgroundColor: accentColor },
           ]}
           onPress={onSelectSong}
         >
-          <IconSymbol name="music.note" size={20} color={primaryColor} />
+          <IconSymbol name="music.note" size={20} color={textColor} />
           <ThemedText
-            style={[createPostStyles.selectSongText, { color: "#4B5563" }]}
+            style={[createPostStyles.selectSongText, { color: textColor }]}
           >
             Select a song
           </ThemedText>
@@ -81,10 +90,10 @@ export function CreatePostForm({
       <TextInput
         style={[
           createPostStyles.postInput,
-          { color: "#1F2937", borderColor: "#FDF9E0" },
+          { color: textColor, borderColor: borderColor },
         ]}
         placeholder="What's on your mind?"
-        placeholderTextColor="#7B7B7B80"
+        placeholderTextColor={mutedColor}
         value={postContent}
         onChangeText={setPostContent}
         multiline
@@ -93,7 +102,7 @@ export function CreatePostForm({
 
       <View style={createPostStyles.createPostActions}>
         <ThemedText
-          style={[createPostStyles.characterCount, { color: "#9CA3AF" }]}
+          style={[createPostStyles.characterCount, { color: mutedColor }]}
         >
           {postContent.length}/500
         </ThemedText>
