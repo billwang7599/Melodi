@@ -85,7 +85,7 @@ export const Colors = {
 };
 
 export const API = {
-  BACKEND_URL: "https://9c21905964da.ngrok-free.app",
+  BACKEND_URL: "https://samira-unavengeable-abrielle.ngrok-free.dev",
 };
 
 export const SUPABASE = {
