@@ -589,38 +589,6 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Time Range Selector - Integrated */}
-        {listeningStats && (
-          <View style={styles.timeRangeSection}>
-            <View style={[styles.timeRangeContainer, { backgroundColor: surfaceColor }]}>
-              {(['short_term', 'medium_term', 'long_term'] as const).map((range, index) => (
-                <TouchableOpacity
-                  key={range}
-                  style={[
-                    styles.timeRangeButton,
-                    selectedTimeRange === range && [styles.timeRangeButtonActive, { backgroundColor: primaryColor }],
-                    index > 0 && styles.timeRangeButtonNotFirst,
-                  ]}
-                  onPress={() => handleTimeRangeChange(range)}
-                  disabled={timeRangeLoading}
-                  activeOpacity={0.7}
-                >
-                  <ThemedText
-                    style={[
-                      styles.timeRangeText,
-                      selectedTimeRange === range && styles.timeRangeTextActive,
-                      selectedTimeRange !== range && { color: mutedColor },
-                      timeRangeLoading && styles.timeRangeTextDisabled,
-                    ]}
-                  >
-                    {timeRangeLabels[range]}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* Listening Stats - Spotify Style */}
         {listeningStats && (
           <View style={styles.section}>
@@ -683,6 +651,38 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* Time Range Selector - Integrated */}
+        {(listeningStats || topTracks.length > 0) && (
+          <View style={styles.timeRangeSection}>
+            <View style={[styles.timeRangeContainer, { backgroundColor: surfaceColor }]}>
+              {(['short_term', 'medium_term', 'long_term'] as const).map((range, index) => (
+                <TouchableOpacity
+                  key={range}
+                  style={[
+                    styles.timeRangeButton,
+                    selectedTimeRange === range && [styles.timeRangeButtonActive, { backgroundColor: primaryColor }],
+                    index > 0 && styles.timeRangeButtonNotFirst,
+                  ]}
+                  onPress={() => handleTimeRangeChange(range)}
+                  disabled={timeRangeLoading}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={[
+                      styles.timeRangeText,
+                      selectedTimeRange === range && styles.timeRangeTextActive,
+                      selectedTimeRange !== range && { color: mutedColor },
+                      timeRangeLoading && styles.timeRangeTextDisabled,
+                    ]}
+                  >
+                    {timeRangeLabels[range]}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         )}
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   },
   timeRangeContainer: {
     flexDirection: 'row',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 6,
     width: '100%',
     maxWidth: 400,
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 52,
@@ -918,9 +918,9 @@ const styles = StyleSheet.create({
     marginLeft: 0,
   },
   timeRangeText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '600',
-    letterSpacing: -0.2,
+    letterSpacing: -0.5,
   },
   timeRangeTextActive: {
     fontWeight: '700',
