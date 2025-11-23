@@ -4,7 +4,6 @@ export const postCardStyles = StyleSheet.create({
   postContainer: {
     borderRadius: 24,
     padding: 10,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -14,7 +13,6 @@ export const postCardStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#B8D4E3",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -30,19 +28,15 @@ export const postCardStyles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
-    color: "#6B7280",
   },
   username: {
     fontWeight: "600",
-    color: "#1F2937",
   },
   listeningText: {
     fontSize: 14,
     lineHeight: 20,
-    color: "#6B7280",
   },
   songCardContainer: {
-    backgroundColor: "#D6D3D1",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
@@ -63,19 +57,16 @@ export const postCardStyles = StyleSheet.create({
   },
   artistLabel: {
     fontSize: 11,
-    color: "#6B7280",
     marginBottom: 2,
   },
   songTitleLarge: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#1E3A8A",
     marginBottom: 4,
     lineHeight: 22,
   },
   artistName: {
     fontSize: 13,
-    color: "#4B5563",
     marginBottom: 6,
   },
   starRating: {
@@ -84,11 +75,9 @@ export const postCardStyles = StyleSheet.create({
   },
   star: {
     fontSize: 18,
-    color: "#000",
   },
   starEmpty: {
     fontSize: 18,
-    color: "#000",
   },
   playControls: {
     flexDirection: "row",
@@ -105,7 +94,6 @@ export const postCardStyles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 4,
-    backgroundColor: "#9CA3AF",
     borderRadius: 2,
   },
   progressFill: {
@@ -114,21 +102,18 @@ export const postCardStyles = StyleSheet.create({
     borderRadius: 2,
   },
   timestampBadge: {
-    backgroundColor: "#A8A29E",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   timestampText: {
     fontSize: 11,
-    color: "#4B5563",
   },
   description: {
     paddingVertical: 8,
     paddingHorizontal: 6,
     fontSize: 13,
     lineHeight: 20,
-    color: "#4B5563",
   },
   actionsContainer: {
     flexDirection: "row",

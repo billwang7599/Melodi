@@ -2,6 +2,7 @@ import { SpotifyEmbed } from "@/components/feed/SpotifyEmbed";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { API } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { postCardStyles } from "@/styles/postCardStyles";
 import { Comment, FeedPost } from "@/types/feed";
 import { useState } from "react";
@@ -17,6 +18,8 @@ interface PostCardProps {
   surfaceColor: string;
   mutedColor: string;
   primaryColor: string;
+  textColor: string;
+  borderColor: string;
   authToken?: string;
 }
 
@@ -25,9 +28,10 @@ export function PostCard({
   onLike,
   onComment,
   onCommentAdded,
-  surfaceColor,
   mutedColor,
   primaryColor,
+  textColor,
+  borderColor,
   authToken,
 }: PostCardProps) {
   const [isLiking, setIsLiking] = useState(false);
@@ -154,11 +158,19 @@ export function PostCard({
     }
   };
 
+  const shadowColor = useThemeColor({}, "shadow");
+  const accentColor = useThemeColor({}, "accent");
+
   return (
-    <View style={[postCardStyles.postContainer]}>
+    <View style={[postCardStyles.postContainer, { shadowColor }]}>
       {/* User Header */}
       <View style={postCardStyles.userHeader}>
-        <View style={postCardStyles.avatarPlaceholder}>
+        <View
+          style={[
+            postCardStyles.avatarPlaceholder,
+            { backgroundColor: accentColor },
+          ]}
+        >
           <IconSymbol name="person.circle.fill" size={40} color={mutedColor} />
         </View>
         <View style={postCardStyles.headerTextContainer}>
@@ -174,7 +186,7 @@ export function PostCard({
         </View>
       </View>
 
-      {/* Song Card with cream/beige background */}
+      {/* Song Card */}
 
       {post.songs.song_id && (
         <SpotifyEmbed trackId={post.songs.spotify_id || ""} />
@@ -196,10 +208,10 @@ export function PostCard({
           <TouchableOpacity style={postCardStyles.playButton}>
             <IconSymbol name="play.fill" size={14} color={primaryColor} />
           </TouchableOpacity>
-          <View style={postCardStyles.progressBar}>
+          <View style={[postCardStyles.progressBar, { backgroundColor: mutedColor }]}>
             <View style={[postCardStyles.progressFill, { backgroundColor: primaryColor }]} />
           </View>
-          <View style={postCardStyles.timestampBadge}>
+          <View style={[postCardStyles.timestampBadge, { backgroundColor: accentColor }]}>
             <ThemedText style={postCardStyles.timestampText}>{formatTimestamp(post.created_at)}</ThemedText>
           </View>
         </View>
@@ -257,6 +269,8 @@ export function PostCard({
           onSubmit={handleCommentSubmit}
           mutedColor={mutedColor}
           primaryColor={primaryColor}
+          textColor={textColor}
+          borderColor={borderColor}
         />
       )}
 

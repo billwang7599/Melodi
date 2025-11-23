@@ -81,6 +81,7 @@ export default function ProfileScreen() {
   const primaryColor = useThemeColor({}, 'primary');
   const mutedColor = useThemeColor({}, 'textMuted');
   const surfaceColor = useThemeColor({}, 'surface');
+  const surfaceElevatedColor = useThemeColor({}, 'surfaceElevated');
   const borderColor = useThemeColor({}, 'border');
 
   const [loading, setLoading] = useState(true);
@@ -422,7 +423,16 @@ export default function ProfileScreen() {
               });
             }
           } else {
-            console.error('Failed to fetch profile stats:', response.status);
+            // Try to get error message from response
+            let errorMessage = `Status: ${response.status}`;
+            try {
+              const errorData = await response.json();
+              errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
+            } catch (e) {
+              errorMessage += ` - ${response.statusText}`;
+            }
+            console.error('Failed to fetch profile stats:', errorMessage);
+            console.error('Request URL:', `${API.BACKEND_URL}/api/auth/user/${user.id}`);
             // Set default values if fetch fails
             setProfileStats({
               totalPosts: 0,
@@ -488,30 +498,30 @@ export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 30 }]}>
+        {/* Minimal Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <ThemedText style={styles.headerTitle}>Profile</ThemedText>
           <View style={styles.headerActions}>
             <TouchableOpacity 
               style={styles.headerButton}
               onPress={() => router.push('/profile/edit' as any)}
             >
-              <IconSymbol name="gear" size={20} color={mutedColor} />
+              <IconSymbol name="gear" size={22} color={mutedColor} />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.headerButton}
               onPress={handleLogout}
             >
-              <IconSymbol name="rectangle.portrait.and.arrow.right" size={20} color={mutedColor} />
+              <IconSymbol name="rectangle.portrait.and.arrow.right" size={22} color={mutedColor} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Profile Info */}
-        <View style={[styles.profileCard, { backgroundColor: surfaceColor, borderColor }]}>
+        {/* Profile Header - Spotify Style */}
+        <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { borderColor: primaryColor }]}>
-              <IconSymbol name="person.fill" size={40} color={primaryColor} />
+            <View style={[styles.avatar, { backgroundColor: surfaceColor }]}>
+              <IconSymbol name="person.fill" size={48} color={primaryColor} />
             </View>
           </View>
           
@@ -525,13 +535,8 @@ export default function ProfileScreen() {
             </ThemedText>
           )}
 
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statValue}>{profileStats.totalPosts}</ThemedText>
-              <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
+          {/* Minimal Stats Row */}
+          <View style={styles.statsRow}>
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => user?.id && router.push(`/followers?userId=${user.id}` as any)}
@@ -539,7 +544,6 @@ export default function ProfileScreen() {
               <ThemedText style={styles.statValue}>{profileStats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
             </TouchableOpacity>
-            <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
             <TouchableOpacity 
               style={styles.statItem}
               onPress={() => user?.id && router.push(`/following?userId=${user.id}` as any)}
@@ -547,28 +551,21 @@ export default function ProfileScreen() {
               <ThemedText style={styles.statValue}>{profileStats.totalFollowing}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Following</ThemedText>
             </TouchableOpacity>
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statValue}>{profileStats.totalPosts}</ThemedText>
+              <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
+            </View>
           </View>
-
-          {/* Edit Profile Button */}
-          <TouchableOpacity 
-            style={[styles.editButton, { borderColor }]}
-            onPress={() => router.push('/profile/edit' as any)}
-          >
-            <IconSymbol name="pencil" size={14} color={primaryColor} />
-            <ThemedText style={[styles.editButtonText, { color: primaryColor }]}>
-              Edit Profile
-            </ThemedText>
-          </TouchableOpacity>
         </View>
 
-        {/* Spotify Auth Prompt */}
+        {/* Spotify Auth Prompt - Minimal */}
         {!listeningStats && topTracks.length === 0 && !loading && (
           <View style={styles.section}>
-            <View style={[styles.card, { backgroundColor: surfaceColor, borderColor }]}>
-              <IconSymbol name="music.note" size={32} color={primaryColor} style={styles.authIcon} />
+            <View style={[styles.authCard, { backgroundColor: surfaceColor }]}>
+              <IconSymbol name="music.note" size={40} color={primaryColor} style={styles.authIcon} />
               <ThemedText style={styles.authTitle}>Connect to Spotify</ThemedText>
               <ThemedText style={[styles.authMessage, { color: mutedColor }]}>
-                To view your listening analytics, please authenticate with Spotify first.
+                Connect your Spotify account to see your listening insights
               </ThemedText>
               <TouchableOpacity
                 style={[
@@ -585,21 +582,20 @@ export default function ProfileScreen() {
                 {authenticating ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <ThemedText style={styles.authButtonText}>Login to Spotify</ThemedText>
+                  <ThemedText style={styles.authButtonText}>Connect Spotify</ThemedText>
                 )}
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* Listening Stats */}
+        {/* Listening Stats - Spotify Style */}
         {listeningStats && (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Listening Stats</ThemedText>
-            <View style={[styles.card, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={styles.listeningStatsGrid}>
+            <ThemedText style={styles.sectionTitle}>Your Listening</ThemedText>
+            <View style={[styles.statsCard, { backgroundColor: surfaceColor }]}>
+              <View style={[styles.listeningStatsRow, { borderBottomColor: borderColor }]}>
                 <View style={styles.listeningStatItem}>
-                  <IconSymbol name="clock.fill" size={24} color={primaryColor} />
                   <ThemedText style={styles.listeningStatValue}>
                     {Math.round(listeningStats.totalMinutes / 60)}h
                   </ThemedText>
@@ -609,147 +605,178 @@ export default function ProfileScreen() {
                 </View>
                 
                 <View style={styles.listeningStatItem}>
-                  <IconSymbol name="music.note" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
+                  <ThemedText style={styles.listeningStatValueGenre}>
                     {listeningStats.topGenre}
                   </ThemedText>
                   <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
                     Top Genre
                   </ThemedText>
                 </View>
-
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="figure.dance" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {listeningStats.danceability}%
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Danceability
-                  </ThemedText>
+              </View>
+              
+              <View style={styles.metricsRow}>
+                <View style={styles.metricItem}>
+                  <View style={styles.metricHeader}>
+                    <ThemedText style={[styles.metricLabel, { color: mutedColor }]}>Danceability</ThemedText>
+                    <ThemedText style={styles.metricValue}>{listeningStats.danceability}%</ThemedText>
+                  </View>
+                  <View style={[styles.metricBar, { backgroundColor: borderColor }]}>
+                    <View 
+                      style={[
+                        styles.metricBarFill, 
+                        { 
+                          width: `${listeningStats.danceability}%`,
+                          backgroundColor: primaryColor 
+                        }
+                      ]} 
+                    />
+                  </View>
                 </View>
 
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="bolt.fill" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {listeningStats.energy}%
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Energy
-                  </ThemedText>
+                <View style={styles.metricItem}>
+                  <View style={styles.metricHeader}>
+                    <ThemedText style={[styles.metricLabel, { color: mutedColor }]}>Energy</ThemedText>
+                    <ThemedText style={styles.metricValue}>{listeningStats.energy}%</ThemedText>
+                  </View>
+                  <View style={[styles.metricBar, { backgroundColor: borderColor }]}>
+                    <View 
+                      style={[
+                        styles.metricBarFill, 
+                        { 
+                          width: `${listeningStats.energy}%`,
+                          backgroundColor: primaryColor 
+                        }
+                      ]} 
+                    />
+                  </View>
                 </View>
               </View>
             </View>
           </View>
         )}
 
-        {/* Time Range Selector */}
-        <View style={styles.timeRangeSelector}>
-          {(['short_term', 'medium_term', 'long_term'] as const).map((range) => (
-            <TouchableOpacity
-              key={range}
-              style={[
-                styles.timeRangeButton,
-                selectedTimeRange === range && [styles.timeRangeButtonActive, { backgroundColor: primaryColor }],
-                { borderColor },
-              ]}
-              onPress={() => handleTimeRangeChange(range)}
-              disabled={timeRangeLoading}
-            >
-              <ThemedText
-                style={[
-                  styles.timeRangeText,
-                  selectedTimeRange === range && styles.timeRangeTextActive,
-                  selectedTimeRange !== range && { color: mutedColor },
-                  timeRangeLoading && styles.timeRangeTextDisabled,
-                ]}
+        {/* Time Range Selector - Integrated */}
+        {(listeningStats || topTracks.length > 0) && (
+          <View style={styles.timeRangeSection}>
+            <View style={[styles.timeRangeContainer, { backgroundColor: surfaceColor }]}>
+              {(['short_term', 'medium_term', 'long_term'] as const).map((range, index) => (
+                <TouchableOpacity
+                  key={range}
+                  style={[
+                    styles.timeRangeButton,
+                    selectedTimeRange === range && [styles.timeRangeButtonActive, { backgroundColor: primaryColor }],
+                    index > 0 && styles.timeRangeButtonNotFirst,
+                  ]}
+                  onPress={() => handleTimeRangeChange(range)}
+                  disabled={timeRangeLoading}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={[
+                      styles.timeRangeText,
+                      selectedTimeRange === range && styles.timeRangeTextActive,
+                      selectedTimeRange !== range && { color: mutedColor },
+                      timeRangeLoading && styles.timeRangeTextDisabled,
+                    ]}
+                  >
+                    {timeRangeLabels[range]}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Top Tracks - Spotify Style */}
+        {topTracks.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Top Tracks</ThemedText>
+            </View>
+            
+            {timeRangeLoading ? (
+              <View style={styles.musicLoadingContainer}>
+                <ActivityIndicator size="small" color={primaryColor} />
+                <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
+                  Loading tracks...
+                </ThemedText>
+              </View>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
               >
-                {timeRangeLabels[range]}
-              </ThemedText>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Top Tracks */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Your Top Tracks</ThemedText>
-            <TouchableOpacity>
-              <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>See All</ThemedText>
-            </TouchableOpacity>
+                {topTracks.map((track, index) => (
+                  <TouchableOpacity 
+                    key={track.id} 
+                    style={styles.trackCard}
+                  >
+                    <View style={[styles.trackNumber, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                      <ThemedText style={styles.trackNumberText}>
+                        {index + 1}
+                      </ThemedText>
+                    </View>
+                    <Image
+                      source={{ uri: track.albumArt }}
+                      style={styles.trackImage}
+                    />
+                    <ThemedText style={styles.trackName} numberOfLines={1}>
+                      {track.name}
+                    </ThemedText>
+                    <ThemedText style={[styles.trackArtist, { color: mutedColor }]} numberOfLines={1}>
+                      {track.artist}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
-          
-          {timeRangeLoading ? (
-            <View style={styles.musicLoadingContainer}>
-              <ActivityIndicator size="small" color={primaryColor} />
-              <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
-                Loading tracks...
-              </ThemedText>
-            </View>
-          ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {topTracks.map((track) => (
-                <TouchableOpacity 
-                  key={track.id} 
-                  style={[styles.trackCard, { width: CARD_WIDTH }]}
-                >
-                  <Image
-                    source={{ uri: track.albumArt }}
-                    style={styles.trackImage}
-                  />
-                  <ThemedText style={styles.trackName} numberOfLines={2}>
-                    {track.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.trackArtist, { color: mutedColor }]} numberOfLines={1}>
-                    {track.artist}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+        )}
 
-        {/* Top Artists */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>Your Top Artists</ThemedText>
-            <TouchableOpacity>
-              <ThemedText style={[styles.seeAllText, { color: primaryColor }]}>See All</ThemedText>
-            </TouchableOpacity>
+        {/* Top Artists - Spotify Style */}
+        {topArtists.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Top Artists</ThemedText>
+            </View>
+            
+            {timeRangeLoading ? (
+              <View style={styles.musicLoadingContainer}>
+                <ActivityIndicator size="small" color={primaryColor} />
+                <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
+                  Loading artists...
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.artistsGridContainer}>
+                <View style={styles.artistsGrid}>
+                  {topArtists.map((artist, index) => (
+                    <TouchableOpacity 
+                      key={artist.id} 
+                      style={styles.artistCard}
+                    >
+                      <View style={styles.artistImageContainer}>
+                        <View style={[styles.artistNumber, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                          <ThemedText style={styles.artistNumberText}>
+                            {index + 1}
+                          </ThemedText>
+                        </View>
+                        <Image
+                          source={{ uri: artist.image }}
+                          style={styles.artistImage}
+                        />
+                      </View>
+                      <ThemedText style={styles.artistName} numberOfLines={2}>
+                        {artist.name}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
-          
-          {timeRangeLoading ? (
-            <View style={styles.musicLoadingContainer}>
-              <ActivityIndicator size="small" color={primaryColor} />
-              <ThemedText style={[styles.musicLoadingText, { color: mutedColor }]}>
-                Loading artists...
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.artistsGrid}>
-              {topArtists.map((artist) => (
-                <TouchableOpacity 
-                  key={artist.id} 
-                  style={[styles.artistCard, { backgroundColor: surfaceColor, borderColor }]}
-                >
-                  <Image
-                    source={{ uri: artist.image }}
-                    style={styles.artistImage}
-                  />
-                  <ThemedText style={styles.artistName} numberOfLines={1}>
-                    {artist.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.artistGenres, { color: mutedColor }]} numberOfLines={1}>
-                    {artist.genres.slice(0, 2).join(', ')}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+        )}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -778,243 +805,346 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    lineHeight: 34,
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    lineHeight: 40,
+    includeFontPadding: false,
   },
   headerActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   headerButton: {
     padding: 8,
   },
-  profileCard: {
-    marginHorizontal: 16,
-    padding: 24,
-    borderRadius: 16,
-    borderWidth: 1,
+  profileSection: {
     alignItems: 'center',
+    paddingTop: 24,
+    paddingBottom: 32,
+    paddingHorizontal: 20,
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
   },
   displayName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.5,
+    lineHeight: 36,
+    includeFontPadding: false,
   },
   email: {
-    fontSize: 14,
-    marginBottom: 20,
+    fontSize: 15,
+    marginBottom: 24,
+    opacity: 0.7,
   },
-  statsContainer: {
+  statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 20,
+    gap: 32,
+    paddingTop: 8,
   },
   statItem: {
-    flex: 1,
     alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   statLabel: {
-    fontSize: 12,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+    marginTop: 32,
+    paddingTop: 20,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 16,
   },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  listeningStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  listeningStatItem: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-    padding: 12,
-  },
-  listeningStatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  listeningStatLabel: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  timeRangeSelector: {
-    flexDirection: 'row',
+  timeRangeSection: {
     marginTop: 24,
-    marginHorizontal: 16,
+    marginHorizontal: 20,
+    alignItems: 'center',
+  },
+  timeRangeContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 6,
+    width: '100%',
+    maxWidth: 400,
     gap: 8,
   },
   timeRangeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
   },
   timeRangeButtonActive: {
-    borderWidth: 0,
+    // Active state handled by backgroundColor
+  },
+  timeRangeButtonNotFirst: {
+    marginLeft: 0,
   },
   timeRangeText: {
-    fontSize: 12,
+    fontSize: 17,
     fontWeight: '600',
+    letterSpacing: -0.5,
   },
   timeRangeTextActive: {
-    color: '#FFFFFF',
+    fontWeight: '700',
   },
   timeRangeTextDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
+  },
+  statsCard: {
+    padding: 24,
+    borderRadius: 12,
+    overflow: 'visible',
+  },
+  listeningStatsRow: {
+    flexDirection: 'row',
+    gap: 32,
+    marginBottom: 32,
+    paddingBottom: 24,
+    paddingTop: 0,
+    borderBottomWidth: 1,
+    alignItems: 'flex-start',
+    overflow: 'visible',
+  },
+  listeningStatItem: {
+    flex: 1,
+    alignItems: 'flex-start',
+    paddingTop: 0,
+    overflow: 'visible',
+  },
+  listeningStatValue: {
+    fontSize: 36,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -1,
+    lineHeight: 44,
+    includeFontPadding: false,
+  },
+  listeningStatValueGenre: {
+    fontSize: 30,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: -0.8,
+    lineHeight: 38,
+    includeFontPadding: false,
+  },
+  listeningStatLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metricsRow: {
+    gap: 20,
+  },
+  metricItem: {
+    gap: 8,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  metricLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  metricValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  metricBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  metricBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  authCard: {
+    padding: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  authIcon: {
+    marginBottom: 20,
+  },
+  authTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 12,
+    letterSpacing: -0.5,
+  },
+  authMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+    paddingHorizontal: 8,
+  },
+  authButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   musicLoadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
     gap: 12,
   },
   musicLoadingText: {
     fontSize: 14,
   },
   horizontalScroll: {
-    paddingRight: 16,
-    gap: 12,
+    paddingRight: 20,
+    gap: 16,
   },
   trackCard: {
-    marginRight: 12,
+    width: 140,
+    marginRight: 16,
+  },
+  trackNumber: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  trackNumberText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   trackImage: {
     width: '100%',
     aspectRatio: 1,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   trackName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: -0.2,
   },
   trackArtist: {
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  artistsGridContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   artistsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'center',
+    gap: 20,
+    width: '100%',
   },
   artistCard: {
-    width: (width - 48) / 3,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: (width - 60) / 2,
     alignItems: 'center',
+    marginBottom: 20,
+  },
+  artistImageContainer: {
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
+  },
+  artistNumber: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  artistNumberText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   artistImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
+    width: (width - 60) / 2,
+    aspectRatio: 1,
+    borderRadius: (width - 60) / 4,
   },
   artistName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 2,
-  },
-  artistGenres: {
-    fontSize: 10,
-    textAlign: 'center',
+    letterSpacing: -0.2,
+    lineHeight: 18,
+    paddingHorizontal: 4,
   },
   bottomPadding: {
-    height: 40,
-  },
-  authIcon: {
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  authTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  authMessage: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  authButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 20,
-    alignSelf: 'center',
-  },
-  authButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    height: 60,
   },
 });

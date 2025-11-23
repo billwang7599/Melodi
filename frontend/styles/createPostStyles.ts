@@ -5,7 +5,6 @@ export const createPostStyles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -41,12 +40,10 @@ export const createPostStyles = StyleSheet.create({
   selectedSongName: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1F2937",
     marginBottom: 2,
   },
   selectedSongArtist: {
     fontSize: 13,
-    color: "#6B7280",
   },
   removeButton: {
     padding: 4,

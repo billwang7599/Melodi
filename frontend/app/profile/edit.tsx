@@ -15,6 +15,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +24,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
+  const textColor = useThemeColor({}, 'text');
   const mutedColor = useThemeColor({}, 'textMuted');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
@@ -191,7 +193,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={displayName}
@@ -213,7 +215,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={bio}
@@ -239,7 +241,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={favoriteGenres}
@@ -249,6 +251,12 @@ export default function EditProfileScreen() {
                 maxLength={100}
               />
             </View>
+          </View>
+
+          {/* Appearance */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Appearance</ThemedText>
+            <ThemeToggle />
           </View>
 
           {/* Privacy Settings */}

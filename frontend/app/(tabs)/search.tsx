@@ -155,12 +155,13 @@ export default function SearchUsersScreen() {
 
     return (
       <TouchableOpacity
-        style={[styles.userItem, { backgroundColor: surfaceColor, borderColor }]}
+        style={[styles.userItem, { backgroundColor: surfaceColor }]}
         onPress={() => handleUserPress(item.id)}
+        activeOpacity={0.7}
       >
         <View style={styles.userInfo}>
-          <View style={[styles.avatar, { borderColor: primaryColor }]}>
-            <IconSymbol name="person.fill" size={24} color={primaryColor} />
+          <View style={[styles.avatar, { backgroundColor: surfaceColor }]}>
+            <IconSymbol name="person.fill" size={28} color={primaryColor} />
           </View>
           <View style={styles.userDetails}>
             <ThemedText style={styles.displayName}>
@@ -181,18 +182,19 @@ export default function SearchUsersScreen() {
             style={[
               styles.followButton,
               isFollowing
-                ? { borderColor, backgroundColor: 'transparent' }
+                ? { backgroundColor: 'transparent' }
                 : { backgroundColor: primaryColor },
             ]}
             onPress={(e) => {
               e.stopPropagation();
               handleFollow(item.id);
             }}
+            activeOpacity={0.7}
           >
             <ThemedText
               style={[
                 styles.followButtonText,
-                isFollowing ? { color: primaryColor } : { color: '#FFFFFF' },
+                isFollowing ? { color: mutedColor } : { color: '#FFFFFF' },
               ]}
             >
               {isFollowing ? 'Following' : 'Follow'}
@@ -206,17 +208,17 @@ export default function SearchUsersScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 30 }]}>
-        <ThemedText style={styles.headerTitle}>Search Users</ThemedText>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+        <ThemedText style={styles.headerTitle}>Search</ThemedText>
       </View>
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
-        <View style={[styles.searchInputContainer, { backgroundColor: inputBackgroundColor, borderColor: inputBorderColor }]}>
-          <IconSymbol name="magnifyingglass" size={20} color={mutedColor} />
+        <View style={[styles.searchInputContainer, { backgroundColor: surfaceColor }]}>
+          <IconSymbol name="magnifyingglass" size={22} color={mutedColor} />
           <TextInput
             style={[styles.searchInput, { color: useThemeColor({}, 'text') }]}
-            placeholder="Search by username..."
+            placeholder="Search users..."
             placeholderTextColor={mutedColor}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -273,34 +275,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    lineHeight: 34,
+    fontSize: 36,
+    fontWeight: '700',
+    letterSpacing: -1,
+    lineHeight: 44,
+    includeFontPadding: false,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
     gap: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 17,
+    fontWeight: '500',
+    letterSpacing: -0.3,
   },
   loadingContainer: {
     flex: 1,
@@ -309,7 +310,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: -0.2,
   },
   emptyContainer: {
     flex: 1,
@@ -318,75 +321,82 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyIcon: {
-    marginBottom: 16,
-    opacity: 0.4,
+    marginBottom: 20,
+    opacity: 0.3,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   userItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 12,
   },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    marginRight: 16,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(108, 92, 231, 0.1)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    marginRight: 12,
+    marginRight: 16,
   },
   userDetails: {
     flex: 1,
   },
   displayName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: -0.4,
+    lineHeight: 24,
+    includeFontPadding: false,
   },
   username: {
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: 15,
+    marginBottom: 6,
+    letterSpacing: -0.2,
+    fontWeight: '500',
   },
   bio: {
-    fontSize: 12,
+    fontSize: 14,
+    letterSpacing: -0.2,
+    lineHeight: 20,
   },
   followButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     borderRadius: 20,
-    borderWidth: 1,
     minWidth: 100,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   followButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    letterSpacing: -0.2,
   },
 });
 
