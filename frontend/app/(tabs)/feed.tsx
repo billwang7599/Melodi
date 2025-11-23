@@ -135,11 +135,6 @@ export default function FeedScreen() {
       return;
     }
 
-    if (!postContent.trim()) {
-      Alert.alert("Error", "Please enter some content for your post");
-      return;
-    }
-
     if (!selectedSong) {
       Alert.alert("Error", "Please select a song for your post");
       return;
@@ -156,7 +151,7 @@ export default function FeedScreen() {
           "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
-          content: postContent.trim(),
+          content: postContent.trim() || "",
           spotifyId: selectedSong.spotifyId,
           visibility: "public",
         }),

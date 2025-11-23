@@ -41,7 +41,7 @@ export function CreatePostForm({
   borderColor,
   accentColor,
 }: CreatePostFormProps) {
-  const shadowColor = useThemeColor({}, 'shadow');
+  const shadowColor = useThemeColor({}, "shadow");
 
   return (
     <View
@@ -51,14 +51,24 @@ export function CreatePostForm({
       ]}
     >
       {selectedSong ? (
-        <View style={[createPostStyles.selectedSongContainer, { backgroundColor: accentColor }]}>
+        <View
+          style={[
+            createPostStyles.selectedSongContainer,
+            { backgroundColor: accentColor },
+          ]}
+        >
           <View style={createPostStyles.songInfoRow}>
             <IconSymbol name="music.note" size={18} color={primaryColor} />
             <View style={createPostStyles.songTextContainer}>
               <ThemedText style={createPostStyles.selectedSongName}>
                 {selectedSong.name}
               </ThemedText>
-              <ThemedText style={[createPostStyles.selectedSongArtist, { color: mutedColor }]}>
+              <ThemedText
+                style={[
+                  createPostStyles.selectedSongArtist,
+                  { color: mutedColor },
+                ]}
+              >
                 {selectedSong.artist}
               </ThemedText>
             </View>
@@ -93,7 +103,7 @@ export function CreatePostForm({
           { color: textColor, borderColor: borderColor },
         ]}
         placeholder="What's on your mind?"
-        placeholderTextColor={mutedColor}
+        placeholderTextColor={mutedColor + "80"}
         value={postContent}
         onChangeText={setPostContent}
         multiline
@@ -110,11 +120,10 @@ export function CreatePostForm({
           style={[
             createPostStyles.postButton,
             { backgroundColor: primaryColor },
-            (!postContent.trim() || !selectedSong || isPosting) &&
-              createPostStyles.postButtonDisabled,
+            (!selectedSong || isPosting) && createPostStyles.postButtonDisabled,
           ]}
           onPress={onCreatePost}
-          disabled={!postContent.trim() || !selectedSong || isPosting}
+          disabled={!selectedSong || isPosting}
         >
           {isPosting ? (
             <ActivityIndicator size="small" color="white" />
