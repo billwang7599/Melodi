@@ -9,6 +9,7 @@ import { AlbumRanking, Comment, FeedPost } from "@/types/feed";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
 import { CommentInput } from "./CommentInput";
 import { CommentsList } from "./CommentsList";
 
@@ -140,6 +141,10 @@ export function PostCard({
     }
     setShowCommentInput(!showCommentInput);
     onComment(post.post_id);
+  };
+
+  const handleUsernameClick = () => {
+    router.push(`/profile/${post.users.id}`);
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -328,23 +333,29 @@ export function PostCard({
     <View style={[postCardStyles.postContainer, { shadowColor }]}>
       {/* User Header */}
       <View style={postCardStyles.userHeader}>
-        <View
+        <TouchableOpacity
           style={[
             postCardStyles.avatarPlaceholder,
             { backgroundColor: accentColor },
           ]}
+          onPress={handleUsernameClick}
+          activeOpacity={0.7}
         >
-        </View>
+        </TouchableOpacity>
         <View style={postCardStyles.headerTextContainer}>
           <ThemedText style={postCardStyles.timestamp}>
             {formatTimestamp(post.created_at)}
           </ThemedText>
-          <ThemedText style={postCardStyles.listeningText}>
-            <ThemedText style={postCardStyles.username}>
-              @{post.users.username}
+          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+            <TouchableOpacity onPress={handleUsernameClick} activeOpacity={0.7}>
+              <ThemedText style={postCardStyles.username}>
+                @{post.users.username}
+              </ThemedText>
+            </TouchableOpacity>
+            <ThemedText style={postCardStyles.listeningText}>
+              {isAlbumPost ? " ranked an album" : " is listening to"}
             </ThemedText>
-            {isAlbumPost ? " ranked an album" : " is listening to"}
-          </ThemedText>
+          </View>
         </View>
       </View>
 

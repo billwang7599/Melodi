@@ -18,9 +18,10 @@ function RootLayoutNav() {
         <Stack.Screen name="dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="followers" options={{ headerShown: false }} />
         <Stack.Screen name="following" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen name="recently-played" options={{ title: "Recently Played" }} />
-        <Stack.Screen name="search-tracks" options={{ title: "Search Tracks" }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="recently-played" options={{ headerShown: false }} />
+        <Stack.Screen name="search-tracks" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </NavigationThemeProvider>

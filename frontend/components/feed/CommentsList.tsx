@@ -3,6 +3,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Comment } from "@/types/feed";
 import { useState } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { router } from "expo-router";
 
 interface CommentsListProps {
   comments: Comment[];
@@ -22,6 +23,10 @@ export function CommentsList({ comments, mutedColor }: CommentsListProps) {
     return new Date(timestamp).toLocaleString();
   };
 
+  const handleUsernameClick = (userId: string) => {
+    router.push(`/profile/${userId}`);
+  };
+
   const visibleComments = isCollapsed
     ? comments.slice(0, maxVisibleComments)
     : comments;
@@ -39,9 +44,11 @@ export function CommentsList({ comments, mutedColor }: CommentsListProps) {
             />
             <View style={styles.commentContent}>
               <View style={styles.commentMeta}>
-                <ThemedText style={styles.commentUsername}>
-                  @{comment.users.username}
-                </ThemedText>
+                <TouchableOpacity onPress={() => handleUsernameClick(comment.users.id)} activeOpacity={0.7}>
+                  <ThemedText style={styles.commentUsername}>
+                    @{comment.users.username}
+                  </ThemedText>
+                </TouchableOpacity>
                 <ThemedText style={[styles.commentTime, { color: mutedColor }]}>
                   {formatTimestamp(comment.created_at)}
                 </ThemedText>

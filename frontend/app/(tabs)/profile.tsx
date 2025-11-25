@@ -1145,6 +1145,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   bottomPadding: {
-    height: 60,
+    height: 100,
   },
 });

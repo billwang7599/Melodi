@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bottomPadding: {
-    height: 40,
+    height: 100,
   },
   postsSection: {
     marginTop: 24,

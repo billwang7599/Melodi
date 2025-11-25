@@ -8,7 +8,7 @@ export const feedStyles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   header: {
     paddingHorizontal: 16,
