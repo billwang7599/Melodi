@@ -168,6 +168,8 @@ export function PostCard({
   const [isLoadingRankings, setIsLoadingRankings] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [albumCoverUrl, setAlbumCoverUrl] = useState<string>("");
+  const [albumName, setAlbumName] = useState<string>("");
+  const [albumArtist, setAlbumArtist] = useState<string>("");
   const isAlbumPost = !!post.album_id && post.albumRankings && post.albumRankings.length > 0;
 
   // Fetch song details for album rankings
@@ -176,13 +178,15 @@ export function PostCard({
       const fetchRankedSongs = async () => {
         setIsLoadingRankings(true);
         try {
-          // First, get album info to get the cover art
+          // First, get album info to get the cover art, name, and artist
           let albumCover = "";
           if (post.album_id) {
             try {
               const albumData = await spotifyAPI.getAlbum(post.album_id);
               albumCover = albumData.images?.[0]?.url || albumData.images?.[1]?.url || "";
               setAlbumCoverUrl(albumCover);
+              setAlbumName(albumData.name || "");
+              setAlbumArtist(albumData.artists?.map((a: any) => a.name).join(", ") || "");
             } catch (error) {
               console.error("Error fetching album:", error);
             }
@@ -230,8 +234,8 @@ export function PostCard({
   const rankingStyles = StyleSheet.create({
     albumRankingContainer: {
       borderRadius: 20,
-      padding: 24,
-      marginBottom: 20,
+      padding: 16,
+      marginBottom: 12,
       backgroundColor: surfaceColor,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.08,
@@ -241,7 +245,7 @@ export function PostCard({
     albumRankingHeader: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 20,
+      marginBottom: 12,
       gap: 12,
     },
     albumRankingTitle: {
@@ -256,8 +260,8 @@ export function PostCard({
     rankingItem: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: 16,
-      paddingHorizontal: 18,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       borderRadius: 16,
       backgroundColor: "transparent",
     },
@@ -304,8 +308,8 @@ export function PostCard({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 16,
-      paddingVertical: 12,
+      marginTop: 12,
+      paddingVertical: 8,
       borderRadius: 12,
       backgroundColor: "transparent",
     },
@@ -348,9 +352,30 @@ export function PostCard({
       {isAlbumPost && (
         <View style={[rankingStyles.albumRankingContainer, { shadowColor }]}>
           <View style={rankingStyles.albumRankingHeader}>
-            <ThemedText style={[rankingStyles.albumRankingTitle, { color: textColor }]}>
-              Album Ranking
-            </ThemedText>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[rankingStyles.albumRankingTitle, { color: textColor }]}>
+                Album Ranking
+              </ThemedText>
+              {(albumName || albumArtist) && (
+                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+                  {albumName && (
+                    <ThemedText style={{ fontSize: 16, fontWeight: "600", color: textColor }}>
+                      {albumName}
+                    </ThemedText>
+                  )}
+                  {albumName && albumArtist && (
+                    <ThemedText style={{ fontSize: 16, color: mutedColor, marginHorizontal: 6 }}>
+                      •
+                    </ThemedText>
+                  )}
+                  {albumArtist && (
+                    <ThemedText style={{ fontSize: 14, color: mutedColor }}>
+                      {albumArtist}
+                    </ThemedText>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
           {isLoadingRankings ? (
             <View style={{ paddingVertical: 20, alignItems: "center" }}>
