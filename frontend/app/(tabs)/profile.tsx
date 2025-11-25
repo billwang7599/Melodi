@@ -7,12 +7,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PostCard } from '@/components/feed/PostCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { FeedPost } from '@/types/feed';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -77,9 +79,10 @@ interface SongAnalysis {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, signOut } = useAuth();
+  const { user, signOut, token } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const mutedColor = useThemeColor({}, 'textMuted');
+  const textColor = useThemeColor({}, 'text');
   const surfaceColor = useThemeColor({}, 'surface');
   const surfaceElevatedColor = useThemeColor({}, 'surfaceElevated');
   const borderColor = useThemeColor({}, 'border');
@@ -87,6 +90,9 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [timeRangeLoading, setTimeRangeLoading] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'analytics' | 'posts'>('analytics');
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [profileStats, setProfileStats] = useState<ProfileStats>({
     totalPosts: 0,
     totalFollowers: 0,
@@ -462,12 +468,104 @@ export default function ProfileScreen() {
     }
   }, [user, loadMusicData]);
 
+  // Load user posts
+  useEffect(() => {
+    const loadUserPosts = async () => {
+      if (!user?.id || activeTab !== 'posts') return;
+
+      setPostsLoading(true);
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        };
+
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API.BACKEND_URL}/api/posts/user/${user.id}`, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        const transformedPosts: FeedPost[] = (result.posts || []).map((post: any) => ({
+          post_id: post.post_id,
+          user_id: post.user_id,
+          content: post.content,
+          like_count: post.like_count || 0,
+          visibility: post.visibility,
+          created_at: post.created_at,
+          updated_at: post.updated_at,
+          isLiked: post.isLiked || false,
+          comments: post.comments || [],
+          album_id: post.album_id || null,
+          albumRankings: post.albumRankings || [],
+          songRank: post.songRank || undefined,
+          songScore: post.songScore || undefined,
+          users: {
+            id: post.users?.id || post.user_id,
+            username: post.users?.username || '',
+            display_name: post.users?.display_name || null,
+          },
+          songs: post.songs ? {
+            song_id: post.songs.song_id?.toString() || '',
+            spotify_id: post.songs.spotify_id || '',
+            song_name: post.songs.song_name || '',
+            artist_name: post.songs.artist_name || '',
+            album_name: post.songs.album_name || null,
+            cover_art_url: post.songs.cover_art_url || null,
+          } : null,
+        }));
+
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Error loading user posts:', error);
+        setPosts([]);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    loadUserPosts();
+  }, [user?.id, activeTab, token]);
+
   // handle time range changes
   const handleTimeRangeChange = async (timeRange: 'short_term' | 'medium_term' | 'long_term') => {
     setSelectedTimeRange(timeRange);
     setTimeRangeLoading(true);
     await loadMusicData(timeRange);
     setTimeRangeLoading(false);
+  };
+
+  const handleLike = (postId: number, newLikeCount: number, isLiked: boolean) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, like_count: newLikeCount, isLiked: isLiked }
+          : post
+      )
+    );
+  };
+
+  const handleComment = (postId: number) => {
+    console.log('Navigate to comments for post:', postId);
+  };
+
+  const handleCommentAdded = (postId: number, comment: any) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, comments: [...(post.comments || []), comment] }
+          : post
+      )
+    );
   };
 
   const handleLogout = async () => {
@@ -537,14 +635,14 @@ export default function ProfileScreen() {
 
           {/* Minimal Stats Row */}
           <View style={styles.statsRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statItem}
               onPress={() => user?.id && router.push(`/followers?userId=${user.id}` as any)}
             >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.statItem}
               onPress={() => user?.id && router.push(`/following?userId=${user.id}` as any)}
             >
@@ -558,7 +656,88 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Spotify Auth Prompt - Minimal */}
+        {/* Tab Switcher */}
+        <View style={styles.tabSection}>
+          <View style={[styles.tabContainer, { backgroundColor: surfaceColor }]}>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'analytics' && [styles.tabButtonActive, { backgroundColor: primaryColor }],
+              ]}
+              onPress={() => setActiveTab('analytics')}
+              activeOpacity={0.7}
+            >
+              <ThemedText
+                style={[
+                  styles.tabText,
+                  activeTab === 'analytics' && styles.tabTextActive,
+                  activeTab !== 'analytics' && { color: mutedColor },
+                ]}
+              >
+                Analytics
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'posts' && [styles.tabButtonActive, { backgroundColor: primaryColor }],
+              ]}
+              onPress={() => setActiveTab('posts')}
+              activeOpacity={0.7}
+            >
+              <ThemedText
+                style={[
+                  styles.tabText,
+                  activeTab === 'posts' && styles.tabTextActive,
+                  activeTab !== 'posts' && { color: mutedColor },
+                ]}
+              >
+                Posts
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Posts Tab Content */}
+        {activeTab === 'posts' && (
+          <View style={styles.postsSection}>
+            {postsLoading ? (
+              <View style={styles.postsLoadingContainer}>
+                <ActivityIndicator size="small" color={primaryColor} />
+              </View>
+            ) : posts.length === 0 ? (
+              <View style={styles.emptyPostsContainer}>
+                <IconSymbol name="music.note" size={48} color={mutedColor} style={styles.emptyPostsIcon} />
+                <ThemedText style={[styles.emptyPostsText, { color: mutedColor }]}>
+                  No posts yet
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={styles.postsList}>
+                {posts.map((post) => (
+                  <PostCard
+                    key={post.post_id}
+                    post={post}
+                    onLike={handleLike}
+                    onComment={handleComment}
+                    onCommentAdded={handleCommentAdded}
+                    surfaceColor={surfaceColor}
+                    mutedColor={mutedColor}
+                    primaryColor={primaryColor}
+                    textColor={textColor}
+                    borderColor={borderColor}
+                    authToken={token}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Analytics Tab Content */}
+        {activeTab === 'analytics' && (
+          <>
+            {/* Spotify Auth Prompt - Minimal */}
         {!listeningStats && topTracks.length === 0 && !loading && (
           <View style={styles.section}>
             <View style={[styles.authCard, { backgroundColor: surfaceColor }]}>
@@ -776,6 +955,8 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+        )}
+          </>
         )}
 
         <View style={styles.bottomPadding} />
@@ -1146,5 +1327,63 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 100,
+  },
+  tabSection: {
+    marginTop: 16,
+    marginHorizontal: 20,
+    alignItems: 'center',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    padding: 6,
+    width: '100%',
+    maxWidth: 400,
+    gap: 8,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  tabButtonActive: {
+    // Active state handled by backgroundColor
+  },
+  tabText: {
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.5,
+  },
+  tabTextActive: {
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  postsSection: {
+    marginTop: 24,
+    marginHorizontal: 16,
+  },
+  postsLoadingContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyPostsContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyPostsIcon: {
+    marginBottom: 12,
+    opacity: 0.4,
+  },
+  emptyPostsText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  postsList: {
+    gap: 16,
   },
 });

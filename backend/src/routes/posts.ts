@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createComment, createPost, getAllPosts, getCommentsByPostId, getPostsByUserId, toggleLike } from '../controllers/postsController';
+import { createComment, createPost, getAllPosts, getCommentsByPostId, getPostsByUserId, getUserSongRankings, toggleLike } from '../controllers/postsController';
 import { authenticateToken, optionalAuthenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -12,6 +12,12 @@ router.get('/user/:userId', getPostsByUserId);
 
 // Get all public posts (for feed functionality) - optionally authenticated
 router.get('/', optionalAuthenticateToken, getAllPosts);
+
+// Get user's song rankings
+router.get('/rankings/:userId', getUserSongRankings);
+
+// Get current user's song rankings
+router.get('/rankings', authenticateToken, getUserSongRankings);
 
 // Like or unlike a post (protected route - requires authentication)
 router.post('/:postId/like', authenticateToken, toggleLike);

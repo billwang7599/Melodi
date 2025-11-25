@@ -31,6 +31,8 @@ export interface FeedPost {
   comments?: Comment[];
   album_id?: string | null;
   albumRankings?: AlbumRanking[];
+  songRank?: number;
+  songScore?: number;
   users: {
     id: string;
     username: string;
@@ -71,6 +73,7 @@ export interface SelectedSong {
   spotifyId: string;
   name: string;
   artist: string;
+  coverArtUrl?: string | null;
 }
 
 export interface SpotifyAlbumTrack {

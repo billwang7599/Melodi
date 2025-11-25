@@ -16,12 +16,14 @@ import {
 import { CreatePostForm } from "@/components/feed/CreatePostForm";
 import { FeedState } from "@/components/feed/FeedState";
 import { PostCard } from "@/components/feed/PostCard";
+import { SongRankingModal } from "@/components/feed/SongRankingModal";
 import { SongSearchModal } from "@/components/feed/SongSearchModal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { API } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { getSupabase } from "@/lib/supabase";
 import { useSpotifyAPI } from "@/lib/spotify";
 import { feedStyles } from "@/styles/feedStyles";
 import {
@@ -64,6 +66,8 @@ export default function FeedScreen() {
   );
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [showSongRankingModal, setShowSongRankingModal] = useState(false);
+  const [songScore, setSongScore] = useState<number | null>(null);
   const mutedColor = useThemeColor({}, "textMuted");
   const primaryColor = useThemeColor({}, "primary");
   const textColor = useThemeColor({}, "text");
@@ -237,19 +241,29 @@ export default function FeedScreen() {
     );
   };
 
-  const handleCreatePost = async () => {
-    if (!user) {
+  const submitPost = async (scoreToUse: number | null = null) => {
+    if (!user || !token) {
+      console.error("Cannot post - user or token missing:", { user: !!user, token: !!token });
       Alert.alert("Error", "You must be logged in to create a post");
-      return;
-    }
-
-    if (!selectedSong && !selectedAlbum) {
-      Alert.alert("Error", "Please select a song or album for your post");
       return;
     }
 
     try {
       setIsPosting(true);
+
+      // Refresh the session to ensure we have a valid token
+      const supabase = getSupabase();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error("Session refresh failed:", sessionError);
+        Alert.alert("Error", "Your session has expired. Please log in again.");
+        setIsPosting(false);
+        return;
+      }
+
+      const freshToken = session.access_token;
+      console.log("Using refreshed token for post");
 
       const requestBody: any = {
         content: postContent.trim() || "",
@@ -258,6 +272,11 @@ export default function FeedScreen() {
 
       if (selectedSong) {
         requestBody.spotifyId = selectedSong.spotifyId;
+        // Add song score if provided
+        const finalScore = scoreToUse !== null ? scoreToUse : songScore;
+        if (finalScore) {
+          requestBody.songRank = finalScore;
+        }
       } else if (selectedAlbum) {
         // Get the top-ranked song (rank 1) for the main song display
         const topRankedSong = selectedAlbum.rankedSongs
@@ -283,11 +302,14 @@ export default function FeedScreen() {
           }));
       }
 
+      console.log("Creating post with body:", requestBody);
+      console.log("Fresh token starts with:", freshToken?.substring(0, 20) + "...");
+
       const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${freshToken}`,
           "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify(requestBody),
@@ -295,7 +317,7 @@ export default function FeedScreen() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("Post creation error:", errorData);
+        console.error("Post creation error:", { status: response.status, errorData });
         throw new Error(
           errorData.message || `HTTP ${response.status}: Failed to create post`
         );
@@ -307,6 +329,7 @@ export default function FeedScreen() {
       setPostContent("");
       setSelectedSong(null);
       setSelectedAlbum(null);
+      setSongScore(null);
 
       // Refresh feed
       await fetchPosts();
@@ -321,6 +344,27 @@ export default function FeedScreen() {
     } finally {
       setIsPosting(false);
     }
+  };
+
+  const handleCreatePost = async () => {
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to create a post");
+      return;
+    }
+
+    if (!selectedSong && !selectedAlbum) {
+      Alert.alert("Error", "Please select a song or album for your post");
+      return;
+    }
+
+    // If posting a song and haven't ranked it yet, show ranking modal first
+    if (selectedSong && songScore === null) {
+      setShowSongRankingModal(true);
+      return;
+    }
+
+    // Otherwise proceed with posting
+    await submitPost();
   };
 
   const handleSelectSong = () => {
@@ -346,14 +390,27 @@ export default function FeedScreen() {
   };
 
   const handleSongSelect = (track: SpotifyTrack) => {
-    setSelectedSong({
+    const song = {
       spotifyId: track.id,
       name: track.name,
       artist: track.artists.map((artist) => artist.name).join(", "),
-    });
+      coverArtUrl: track.album.images[0]?.url || null,
+    };
+    setSelectedSong(song);
     setShowSearchModal(false);
     setSearchQuery("");
     setSearchResults([]);
+    // Don't show ranking modal here - will show after clicking post button
+  };
+
+  const handleRankingComplete = async (score: number | null) => {
+    setSongScore(score);
+    setShowSongRankingModal(false);
+
+    // After ranking is complete, proceed with post creation
+    // Pass the score directly to avoid state timing issues
+    // If score is null (skipped), still create the post but without a ranking
+    await submitPost(score);
   };
 
   const handleCloseSearchModal = () => {
@@ -654,6 +711,19 @@ export default function FeedScreen() {
         mutedColor={mutedColor}
         primaryColor={primaryColor}
         insets={insets}
+      />
+
+      {/* Song Ranking Modal */}
+      <SongRankingModal
+        visible={showSongRankingModal}
+        onClose={() => setShowSongRankingModal(false)}
+        onRankingComplete={handleRankingComplete}
+        selectedSong={selectedSong}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        surfaceColor={surfaceColor}
+        borderColor={borderColor}
       />
 
       {/* Album Search Modal */}

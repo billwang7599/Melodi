@@ -3,10 +3,56 @@ import { getDatabase } from "../db";
 import { AuthRequest } from "../middleware/auth";
 import { createOrGetSong } from "./songsController";
 
+// Get user's song rankings
+export const getUserSongRankings = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId || req.params.userId;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const supabase = await getDatabase();
+
+    const { data: rankings, error } = await supabase
+      .from("song_rankings")
+      .select(`
+        id,
+        score,
+        created_at,
+        updated_at,
+        songs:song_id (
+          song_id,
+          spotify_id,
+          song_name,
+          artist_name,
+          album_name,
+          cover_art_url
+        )
+      `)
+      .eq("user_id", userId)
+      .order("score", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    res.status(200).json({
+      rankings: rankings || [],
+    });
+  } catch (error) {
+    console.error("Error fetching user song rankings:", error);
+    res.status(500).json({
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
 // Create a new post
 export const createPost = async (req: AuthRequest, res: Response) => {
   try {
-    const { content, spotifyId, albumId, albumRankings, visibility = "public" } = req.body;
+    const { content, spotifyId, albumId, albumRankings, songRank, visibility = "public" } = req.body;
     const userId = req.userId; // Get user ID from authenticated request
 
     // Validate required fields
@@ -131,6 +177,32 @@ export const createPost = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Handle song score if provided
+    if (songRank && typeof songRank === 'number' && topSongId && newPost.post_id) {
+      try {
+        // Insert or update the song ranking with score
+        const { error: rankingError } = await supabase
+          .from("song_rankings")
+          .upsert({
+            user_id: userId,
+            post_id: newPost.post_id,
+            song_id: topSongId,
+            score: songRank, // Using songRank variable to pass score value
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: "user_id,song_id"
+          });
+
+        if (rankingError) {
+          console.error("Error creating song ranking:", rankingError);
+        }
+      } catch (rankError) {
+        console.error("Error handling song ranking:", rankError);
+        // Don't fail the post creation, just log the error
+      }
+    }
+
     // Fetch the post with album rankings if it's an album post
     let postWithRankings: any = newPost;
     if (postAlbumId) {
@@ -143,6 +215,14 @@ export const createPost = async (req: AuthRequest, res: Response) => {
       postWithRankings = {
         ...newPost,
         albumRankings: rankings || [],
+      };
+    }
+
+    // Add song score if available
+    if (songRank && topSongId) {
+      postWithRankings = {
+        ...postWithRankings,
+        songScore: songRank,
       };
     }
 
@@ -225,18 +305,37 @@ export const getPostsByUserId = async (req: Request, res: Response) => {
       throw error;
     }
 
-    // Fetch album rankings for posts that have album_id
+    // Fetch album rankings and song scores for posts
     const postsWithRankings = await Promise.all(
       (posts || []).map(async (post: any) => {
+        let albumRankings = [];
+        let songScore = null;
+
+        // Fetch album rankings if it's an album post
         if (post.album_id) {
           const { data: rankings } = await supabase
             .from("album_rankings")
             .select("*")
             .eq("post_id", post.post_id)
             .order("rank", { ascending: true });
-          return { ...post, albumRankings: rankings || [] };
+          albumRankings = rankings || [];
         }
-        return post;
+
+        // Fetch song score if it's a song post
+        if (post.top_song_id) {
+          const { data: scoreData } = await supabase
+            .from("song_rankings")
+            .select("score")
+            .eq("user_id", post.user_id)
+            .eq("song_id", post.top_song_id)
+            .single();
+
+          if (scoreData) {
+            songScore = scoreData.score;
+          }
+        }
+
+        return { ...post, albumRankings, songScore };
       })
     );
 
@@ -346,10 +445,13 @@ export const getAllPosts = async (req: AuthRequest, res: Response) => {
       throw error;
     }
 
-    // Fetch album rankings for posts that have album_id
+    // Fetch album rankings and song scores for posts
     const postsWithRankings = await Promise.all(
       (posts || []).map(async (post: any) => {
         let albumRankings = [];
+        let songScore = null;
+
+        // Fetch album rankings if it's an album post
         if (post.album_id) {
           const { data: rankings } = await supabase
             .from("album_rankings")
@@ -358,7 +460,22 @@ export const getAllPosts = async (req: AuthRequest, res: Response) => {
             .order("rank", { ascending: true });
           albumRankings = rankings || [];
         }
-        return { ...post, albumRankings };
+
+        // Fetch song score if it's a song post
+        if (post.top_song_id) {
+          const { data: scoreData } = await supabase
+            .from("song_rankings")
+            .select("score")
+            .eq("user_id", post.user_id)
+            .eq("song_id", post.top_song_id)
+            .single();
+
+          if (scoreData) {
+            songScore = scoreData.score;
+          }
+        }
+
+        return { ...post, albumRankings, songScore };
       })
     );
 

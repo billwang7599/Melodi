@@ -329,6 +329,15 @@ export function PostCard({
   const displayedSongs = isExpanded ? rankedSongsData : rankedSongsData.slice(0, 3);
   const hasMoreSongs = rankedSongsData.length > 3;
 
+  // Get score color based on rating category
+  const getScoreColor = (score: number) => {
+    if (score >= 7) return "#4CAF50"; // Green for "Loved"
+    if (score >= 4) return "#FFC107"; // Yellow for "Liked"
+    return "#FF5252"; // Red for "Disliked"
+  };
+
+  const songScore = post.songScore || post.songRank;
+
   return (
     <View style={[postCardStyles.postContainer, { shadowColor }]}>
       {/* User Header */}
@@ -357,6 +366,32 @@ export function PostCard({
             </ThemedText>
           </View>
         </View>
+
+        {/* Song Score Badge - aligned with avatar on the right */}
+        {songScore && !isAlbumPost && (
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: getScoreColor(songScore) + "20",
+              borderWidth: 2,
+              borderColor: getScoreColor(songScore) + "60",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ThemedText
+              style={{
+                fontSize: 16,
+                fontWeight: "800",
+                color: getScoreColor(songScore),
+              }}
+            >
+              {songScore.toFixed(1)}
+            </ThemedText>
+          </View>
+        )}
       </View>
 
       {/* Album Ranking Display */}

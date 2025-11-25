@@ -31,6 +31,7 @@ export default function PublicProfileScreen() {
   const { user } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const mutedColor = useThemeColor({}, 'textMuted');
+  const textColor = useThemeColor({}, 'text');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
 
@@ -140,19 +141,24 @@ export default function PublicProfileScreen() {
           created_at: post.created_at,
           updated_at: post.updated_at,
           isLiked: false, // Will be updated if user is authenticated
+          comments: post.comments || [],
+          album_id: post.album_id || null,
+          albumRankings: post.albumRankings || [],
+          songRank: post.songRank || undefined,
+          songScore: post.songScore || undefined,
           users: {
             id: post.users?.id || post.user_id,
             username: post.users?.username || '',
             display_name: post.users?.display_name || null,
           },
-          songs: {
-            song_id: post.songs?.song_id?.toString() || '',
-            spotify_id: post.songs?.spotify_id || '',
-            song_name: post.songs?.song_name || '',
-            artist_name: post.songs?.artist_name || '',
-            album_name: post.songs?.album_name || null,
-            cover_art_url: post.songs?.cover_art_url || null,
-          },
+          songs: post.songs ? {
+            song_id: post.songs.song_id?.toString() || '',
+            spotify_id: post.songs.spotify_id || '',
+            song_name: post.songs.song_name || '',
+            artist_name: post.songs.artist_name || '',
+            album_name: post.songs.album_name || null,
+            cover_art_url: post.songs.cover_art_url || null,
+          } : null,
         }));
 
         setPosts(transformedPosts);
@@ -231,6 +237,16 @@ export default function PublicProfileScreen() {
   const handleComment = (postId: number) => {
     // Navigate to comments or show comment modal
     console.log('Navigate to comments for post:', postId);
+  };
+
+  const handleCommentAdded = (postId: number, comment: any) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, comments: [...(post.comments || []), comment] }
+          : post
+      )
+    );
   };
 
   const isOwnProfile = user?.id === id;
@@ -405,9 +421,12 @@ export default function PublicProfileScreen() {
                   post={post}
                   onLike={handleLike}
                   onComment={handleComment}
+                  onCommentAdded={handleCommentAdded}
                   surfaceColor={surfaceColor}
                   mutedColor={mutedColor}
                   primaryColor={primaryColor}
+                  textColor={textColor}
+                  borderColor={borderColor}
                   authToken={token}
                 />
               ))}
