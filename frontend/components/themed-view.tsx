@@ -5,7 +5,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 export type ThemedViewProps = ViewProps & {
   lightColor?: string;
   darkColor?: string;
-  variant?: 'background' | 'surface';
+  variant?: 'background' | 'surface' | 'surfaceElevated';
 };
 
 export function ThemedView({
@@ -15,7 +15,10 @@ export function ThemedView({
   variant = 'background',
   ...otherProps
 }: ThemedViewProps) {
-  const colorKey = variant === 'surface' ? 'surface' : 'background';
+  const colorKey =
+    variant === 'surfaceElevated' ? 'surfaceElevated' :
+    variant === 'surface' ? 'surface' :
+    'background';
   const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, colorKey);
 
   return <View style={[{ backgroundColor }, style]} {...otherProps} />;

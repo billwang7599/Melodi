@@ -111,6 +111,11 @@ export class SpotifyAPI {
     return this.makeSpotifyRequest(`/search?q=${encodedQuery}&type=${type}&limit=${limit}`);
   }
 
+  // Get track details
+  async getTrack(trackId: string) {
+    return this.makeSpotifyRequest(`/tracks/${trackId}`);
+  }
+
   // Get track audio features
   async getTrackAudioFeatures(trackId: string) {
     return this.makeSpotifyRequest(`/audio-features/${trackId}`);
@@ -135,6 +140,22 @@ export class SpotifyAPI {
     });
 
     return this.makeSpotifyRequest(`/recommendations?${queryParams.toString()}`);
+  }
+
+  // Get album details by ID
+  async getAlbum(albumId: string) {
+    return this.makeSpotifyRequest(`/albums/${albumId}`);
+  }
+
+  // Get artist details by ID (includes genres)
+  async getArtist(artistId: string) {
+    return this.makeSpotifyRequest(`/artists/${artistId}`);
+  }
+
+  // Get multiple artists by IDs (includes genres)
+  async getArtists(artistIds: string[]) {
+    const ids = artistIds.slice(0, 50).join(','); // Spotify allows max 50 IDs
+    return this.makeSpotifyRequest(`/artists?ids=${ids}`);
   }
 }
 

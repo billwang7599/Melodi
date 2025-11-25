@@ -1,14 +1,18 @@
 import dotenv from "dotenv";
 import express, { Application, Request, Response } from "express";
 import { initializeDatabase } from "./db";
+import analysisRoutes from "./routes/analysis";
 import authRoutes from "./routes/auth";
+import commentsRoutes from "./routes/comments";
 import postsRoutes from "./routes/posts";
 import songsRoutes from "./routes/songs";
-import savedSongsRoutes from "./routes/savedSongs";
+import usersRoutes from "./routes/users";
 
 const cors = require("cors");
 
-const allowedOrigins = ["http://localhost:8081"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",")
+    : ["http://localhost:8081"];
 
 dotenv.config();
 
@@ -39,6 +43,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/songs", songsRoutes);
 app.use("/api/save-songs", savedSongsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/analysis", analysisRoutes);
+app.use("/api/comments", commentsRoutes);
 
 const startServer = async () => {
     try {

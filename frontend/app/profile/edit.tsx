@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -12,39 +13,66 @@ import {
   View,
 } from 'react-native';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 export default function EditProfileScreen() {
   const { user } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
+  const textColor = useThemeColor({}, 'text');
   const mutedColor = useThemeColor({}, 'textMuted');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
 
-  const [displayName, setDisplayName] = useState(
-    user?.user_metadata?.username || user?.email?.split('@')[0] || ''
-  );
-  const [bio, setBio] = useState(user?.user_metadata?.bio || '');
-  const [favoriteGenres, setFavoriteGenres] = useState(
-    user?.user_metadata?.favorite_genres || ''
-  );
-  const [isPublicProfile, setIsPublicProfile] = useState(
-    user?.user_metadata?.is_public_profile ?? true
-  );
-  const [showTopTracks, setShowTopTracks] = useState(
-    user?.user_metadata?.show_top_tracks ?? true
-  );
-  const [showTopArtists, setShowTopArtists] = useState(
-    user?.user_metadata?.show_top_artists ?? true
-  );
-  const [showListeningStats, setShowListeningStats] = useState(
-    user?.user_metadata?.show_listening_stats ?? true
-  );
+  const [loading, setLoading] = useState(true);
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [favoriteGenres, setFavoriteGenres] = useState('');
+  const [isPublicProfile, setIsPublicProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${user.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        const profile = result.user;
+        
+        setDisplayName(profile.display_name || profile.username || '');
+        setBio(profile.bio || '');
+        setFavoriteGenres(profile.favorite_genres || '');
+        setIsPublicProfile(profile.is_public ?? true);
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+        Alert.alert('Error', 'Failed to load profile data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [user?.id]);
 
   const handleSave = async () => {
     if (!displayName.trim()) {
@@ -52,23 +80,35 @@ export default function EditProfileScreen() {
       return;
     }
 
+    if (!user?.id) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
     try {
       setIsSaving(true);
       
-      // TODO: api call to update user profile
-      
-      console.log('Saving profile with data:', {
-        displayName,
-        bio,
-        favoriteGenres,
-        isPublicProfile,
-        showTopTracks,
-        showTopArtists,
-        showListeningStats,
+      // Update user profile via backend API
+      const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          displayName: displayName.trim(),
+          bio: bio.trim(),
+          favoriteGenres: favoriteGenres.trim(),
+          isPublic: isPublicProfile,
+        }),
       });
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        console.log(API.BACKEND_URL)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Profile updated:', result);
 
       Alert.alert('Success', 'Profile updated successfully!', [
         {
@@ -83,6 +123,17 @@ export default function EditProfileScreen() {
       setIsSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={primaryColor} />
+          <ThemedText style={styles.loadingText}>Loading profile...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -118,7 +169,7 @@ export default function EditProfileScreen() {
           <View style={styles.section}>
             <View style={styles.avatarSection}>
               <View style={[styles.avatar, { borderColor: primaryColor }]}>
-                <IconSymbol name="person.fill" size={48} color={primaryColor} />
+                <IconSymbol name="circle.fill" size={48} color={primaryColor} />
               </View>
               <TouchableOpacity style={styles.changePhotoButton}>
                 <ThemedText style={[styles.changePhotoText, { color: primaryColor }]}>
@@ -142,7 +193,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={displayName}
@@ -164,7 +215,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={bio}
@@ -190,7 +241,7 @@ export default function EditProfileScreen() {
                   {
                     backgroundColor: surfaceColor,
                     borderColor,
-                    color: primaryColor,
+                    color: textColor,
                   },
                 ]}
                 value={favoriteGenres}
@@ -202,11 +253,17 @@ export default function EditProfileScreen() {
             </View>
           </View>
 
+          {/* Appearance */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Appearance</ThemedText>
+            <ThemeToggle />
+          </View>
+
           {/* Privacy Settings */}
           <View style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Privacy Settings</ThemedText>
 
-            <View style={[styles.settingRow, { borderBottomColor: borderColor }]}>
+            <View style={styles.settingRow}>
               <View style={styles.settingInfo}>
                 <ThemedText style={styles.settingLabel}>Public Profile</ThemedText>
                 <ThemedText style={[styles.settingDescription, { color: mutedColor }]}>
@@ -216,56 +273,6 @@ export default function EditProfileScreen() {
               <Switch
                 value={isPublicProfile}
                 onValueChange={setIsPublicProfile}
-                trackColor={{ false: borderColor, true: primaryColor }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-          </View>
-
-          {/* Display Preferences */}
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>What to Show on Profile</ThemedText>
-
-            <View style={[styles.settingRow, { borderBottomColor: borderColor }]}>
-              <View style={styles.settingInfo}>
-                <ThemedText style={styles.settingLabel}>Top Tracks</ThemedText>
-                <ThemedText style={[styles.settingDescription, { color: mutedColor }]}>
-                  Display your most played songs
-                </ThemedText>
-              </View>
-              <Switch
-                value={showTopTracks}
-                onValueChange={setShowTopTracks}
-                trackColor={{ false: borderColor, true: primaryColor }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <View style={[styles.settingRow, { borderBottomColor: borderColor }]}>
-              <View style={styles.settingInfo}>
-                <ThemedText style={styles.settingLabel}>Top Artists</ThemedText>
-                <ThemedText style={[styles.settingDescription, { color: mutedColor }]}>
-                  Display your favorite artists
-                </ThemedText>
-              </View>
-              <Switch
-                value={showTopArtists}
-                onValueChange={setShowTopArtists}
-                trackColor={{ false: borderColor, true: primaryColor }}
-                thumbColor="#FFFFFF"
-              />
-            </View>
-
-            <View style={styles.settingRow}>
-              <View style={styles.settingInfo}>
-                <ThemedText style={styles.settingLabel}>Listening Stats</ThemedText>
-                <ThemedText style={[styles.settingDescription, { color: mutedColor }]}>
-                  Show analytics about your taste
-                </ThemedText>
-              </View>
-              <Switch
-                value={showListeningStats}
-                onValueChange={setShowListeningStats}
                 trackColor={{ false: borderColor, true: primaryColor }}
                 thumbColor="#FFFFFF"
               />
@@ -309,6 +316,16 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    opacity: 0.6,
   },
   keyboardView: {
     flex: 1,

@@ -9,6 +9,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  token: string | null;
   loading: boolean;
   signUp: (email: string, password: string, username?: string) => Promise<{ success: boolean; error?: string }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -37,9 +38,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const supabaseClient = getSupabase();
-    
+
     // Get initial session
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session loaded:', session ? 'valid session' : 'no session');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -50,6 +52,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       data: { subscription },
     } = supabaseClient.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session ? 'with session' : 'no session');
+
+      // Log token refresh events
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         // Small delay to ensure state is updated
         setTimeout(() => {
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/feed');
         }, 100);
       } else if (event === 'SIGNED_OUT') {
         console.log('User signed out, navigating to login');
@@ -195,6 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = {
     user,
     session,
+    token: session?.access_token ?? null,
     loading,
     signUp,
     signIn,

@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { validateEmail, validatePassword, validateUsername } from "@/lib/auth";
 import { Link, router } from "expo-router";
@@ -61,10 +62,10 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       const result = await signUp(email, password, username);
-      
+
       if (result.success) {
         Alert.alert(
-          "Success", 
+          "Success",
           "Please check your email to verify your account!",
           [
             {
@@ -87,7 +88,7 @@ export default function SignUpScreen() {
     setLoading(true);
     try {
       const result = await signInWithSpotify();
-      
+
       if (!result.success) {
         Alert.alert("Error", result.error || "Failed to sign in with Spotify");
       }
@@ -146,8 +147,8 @@ export default function SignUpScreen() {
       {errors.password ? (
         <ThemedText style={styles.errorText}>{errors.password}</ThemedText>
       ) : null}
-      <TouchableOpacity 
-        style={[styles.signUpButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.signUpButton, loading && styles.buttonDisabled]}
         onPress={handleSignUp}
         disabled={loading}
       >
@@ -162,8 +163,8 @@ export default function SignUpScreen() {
         <ThemedView style={styles.orLine} />
       </ThemedView>
 
-      <TouchableOpacity 
-        style={[styles.spotifyButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.spotifyButton, loading && styles.buttonDisabled]}
         onPress={handleSpotifySignIn}
         disabled={loading}
       >
@@ -173,7 +174,9 @@ export default function SignUpScreen() {
       </TouchableOpacity>
 
       <ThemedView style={styles.linkContainer}>
-        <ThemedText style={styles.linkText}>Already have an account? </ThemedText>
+        <ThemedText style={styles.linkText}>
+          Already have an account?{" "}
+        </ThemedText>
         <Link href="/(auth)/login" asChild>
           <TouchableOpacity>
             <ThemedText style={styles.link}>Sign In</ThemedText>
@@ -196,43 +199,34 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderColor: "gray",
-    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderWidth: 2,
     borderRadius: 15,
     marginBottom: 8,
     paddingHorizontal: 16,
     color: "black",
-    backgroundColor: "white",
   },
   inputError: {
-    borderColor: "#FF6B6B",
+    borderColor: "#C86F67",
     borderWidth: 2,
   },
   errorText: {
-    color: "#FF6B6B",
+    color: "#C86F67",
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
   },
   signUpButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#7996A5",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
   },
   buttonText: {
-    color: "white",
+    color: Colors.light.background,
     fontSize: 16,
     fontWeight: "bold",
   },

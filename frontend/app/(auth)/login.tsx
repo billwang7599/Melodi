@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAuth } from "@/contexts/AuthContext";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { validateEmail } from "@/lib/auth";
 import { Link, router } from "expo-router";
 import { useState } from "react";
@@ -16,6 +17,13 @@ export default function LoginScreen() {
   });
 
   const { signIn, signInWithSpotify } = useAuth();
+
+  const borderColor = useThemeColor({}, 'border');
+  const textColor = useThemeColor({}, 'text');
+  const dangerColor = useThemeColor({}, 'danger');
+  const primaryColor = useThemeColor({}, 'primary');
+  const mutedColor = useThemeColor({}, 'textMuted');
+  const surfaceColor = useThemeColor({}, 'surface');
 
   const clearError = (field: string) => {
     if (errors[field as keyof typeof errors]) {
@@ -51,9 +59,9 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const result = await signIn(email, password);
-      
+
       if (result.success) {
-        router.replace("/(tabs)");
+        router.replace("/(tabs)/feed");
       } else {
         Alert.alert("Error", result.error || "Invalid credentials");
       }
@@ -68,7 +76,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const result = await signInWithSpotify();
-      
+
       if (!result.success) {
         Alert.alert("Error", result.error || "Failed to sign in with Spotify");
       }
@@ -85,10 +93,10 @@ export default function LoginScreen() {
       <ThemedText type="title" style={styles.title}>
         Welcome Back
       </ThemedText>
-      
       <TextInput
-        style={[styles.input, errors.email ? styles.inputError : null]}
+        style={[styles.input, { borderColor: errors.email ? dangerColor : borderColor, color: textColor }]}
         placeholder="Email"
+        placeholderTextColor={mutedColor}
         value={email}
         onChangeText={(text) => {
           setEmail(text);
@@ -98,12 +106,12 @@ export default function LoginScreen() {
         autoCapitalize="none"
       />
       {errors.email ? (
-        <ThemedText style={styles.errorText}>{errors.email}</ThemedText>
+        <ThemedText style={[styles.errorText, { color: dangerColor }]}>{errors.email}</ThemedText>
       ) : null}
-
       <TextInput
-        style={[styles.input, errors.password ? styles.inputError : null]}
+        style={[styles.input, { borderColor: errors.password ? dangerColor : borderColor, color: textColor }]}
         placeholder="Password"
+        placeholderTextColor={mutedColor}
         value={password}
         onChangeText={(text) => {
           setPassword(text);
@@ -112,11 +120,10 @@ export default function LoginScreen() {
         secureTextEntry
       />
       {errors.password ? (
-        <ThemedText style={styles.errorText}>{errors.password}</ThemedText>
+        <ThemedText style={[styles.errorText, { color: dangerColor }]}>{errors.password}</ThemedText>
       ) : null}
-
-      <TouchableOpacity 
-        style={[styles.signInButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.signInButton, { backgroundColor: primaryColor }, loading && styles.buttonDisabled]}
         onPress={handleSignIn}
         disabled={loading}
       >
@@ -124,28 +131,25 @@ export default function LoginScreen() {
           {loading ? "Signing In..." : "Sign In"}
         </ThemedText>
       </TouchableOpacity>
-
       <ThemedView style={styles.orContainer}>
-        <ThemedView style={styles.orLine} />
+        <ThemedView style={[styles.orLine, { backgroundColor: borderColor }]} />
         <ThemedText style={styles.orText}>OR</ThemedText>
-        <ThemedView style={styles.orLine} />
+        <ThemedView style={[styles.orLine, { backgroundColor: borderColor }]} />
       </ThemedView>
-
-      <TouchableOpacity 
-        style={[styles.spotifyButton, loading && styles.buttonDisabled]} 
+      <TouchableOpacity
+        style={[styles.spotifyButton, { backgroundColor: surfaceColor, borderColor }, loading && styles.buttonDisabled]}
         onPress={handleSpotifySignIn}
         disabled={loading}
       >
-        <ThemedText style={styles.spotifyButtonText}>
+        <ThemedText style={[styles.spotifyButtonText, { color: textColor }]}>
           {loading ? "Connecting..." : "Continue with Spotify"}
         </ThemedText>
       </TouchableOpacity>
-
       <ThemedView style={styles.linkContainer}>
         <ThemedText style={styles.linkText}>Don't have an account? </ThemedText>
         <Link href="/(auth)/signup" asChild>
           <TouchableOpacity>
-            <ThemedText style={styles.link}>Sign Up</ThemedText>
+            <ThemedText style={[styles.link, { color: primaryColor }]}>Sign Up</ThemedText>
           </TouchableOpacity>
         </Link>
       </ThemedView>
@@ -162,30 +166,21 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: 24,
-    textAlign: "center",
+    textAlign: "left",
   },
   input: {
     height: 50,
-    borderColor: "gray",
     borderWidth: 1,
     borderRadius: 15,
     marginBottom: 8,
     paddingHorizontal: 16,
-    color: "black",
-    backgroundColor: "white",
-  },
-  inputError: {
-    borderColor: "#FF6B6B",
-    borderWidth: 2,
   },
   errorText: {
-    color: "#FF6B6B",
     fontSize: 12,
     marginBottom: 12,
     marginLeft: 4,
   },
   signInButton: {
-    backgroundColor: "#007AFF",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 15,
@@ -193,7 +188,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 20,
     elevation: 3,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -220,7 +214,6 @@ const styles = StyleSheet.create({
   },
   link: {
     fontSize: 14,
-    color: "#007AFF",
     fontWeight: "bold",
   },
   orContainer: {
@@ -232,7 +225,6 @@ const styles = StyleSheet.create({
   orLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E0E0E0",
   },
   orText: {
     marginHorizontal: 15,
@@ -241,7 +233,6 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   spotifyButton: {
-    backgroundColor: "#1DB954",
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 15,
@@ -249,7 +240,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 10,
     elevation: 3,
-    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -258,7 +248,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   spotifyButtonText: {
-    color: "white",
     fontSize: 16,
     fontWeight: "bold",
   },

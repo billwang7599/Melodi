@@ -1,109 +1,223 @@
-import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Fragment, useEffect, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from '@/components/themed-text';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { API } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { useSpotifyAPI } from '@/lib/spotify';
-
-interface FeedPost {
-  post_id: number;
-  user_id: string;
-  content: string;
-  like_count: number;
-  visibility: string;
-  created_at: string;
-  updated_at: string;
-  users: {
-    id: string;
-    username: string;
-    display_name: string | null;
-  };
-  songs: {
-    song_id: string;
-    spotify_id: string;
-    song_name: string;
-    artist_name: string;
-    album_name: string | null;
-    cover_art_url: string | null;
-  };
-}
-
-interface SpotifyTrack {
-  id: string;
-  name: string;
-  artists: Array<{
-    id: string;
-    name: string;
-  }>;
-  album: {
-    id: string;
-    name: string;
-    images: Array<{
-      url: string;
-      height: number;
-      width: number;
-    }>;
-  };
-  external_urls: {
-    spotify: string;
-  };
-}
-
+import { AlbumRankingModal } from "@/components/feed/AlbumRankingModal";
+import {
+  AlbumSearchModal,
+  SpotifyAlbumSearchResult,
+} from "@/components/feed/AlbumSearchModal";
+import { CreatePostForm } from "@/components/feed/CreatePostForm";
+import { FeedState } from "@/components/feed/FeedState";
+import { PostCard } from "@/components/feed/PostCard";
+import { SongRankingModal } from "@/components/feed/SongRankingModal";
+import { SongSearchModal } from "@/components/feed/SongSearchModal";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { API } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { useThemeColor } from "@/hooks/use-theme-color";
+import { getSupabase } from "@/lib/supabase";
+import { useSpotifyAPI } from "@/lib/spotify";
+import { feedStyles } from "@/styles/feedStyles";
+import {
+  Comment,
+  FeedPost,
+  RankedSong,
+  SelectedAlbum,
+  SelectedSong,
+  SpotifyAlbum,
+  SpotifyTrack,
+} from "@/types/feed";
 
 export default function FeedScreen() {
   const [feedData, setFeedData] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [postContent, setPostContent] = useState('');
-  const [selectedSong, setSelectedSong] = useState<{spotifyId: string, name: string, artist: string} | null>(null);
+  const [postContent, setPostContent] = useState("");
+  const [selectedSong, setSelectedSong] = useState<SelectedSong | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<SelectedAlbum | null>(
+    null
+  );
   const [isPosting, setIsPosting] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const mutedColor = useThemeColor({}, 'textMuted');
-  const primaryColor = useThemeColor({}, 'primary');
-  const { user } = useAuth();
+  const [showAlbumSearchModal, setShowAlbumSearchModal] = useState(false);
+  const [albumSearchQuery, setAlbumSearchQuery] = useState("");
+  const [albumSearchResults, setAlbumSearchResults] = useState<
+    SpotifyAlbumSearchResult[]
+  >([]);
+  const [isAlbumSearching, setIsAlbumSearching] = useState(false);
+  const [showAlbumRankingModal, setShowAlbumRankingModal] = useState(false);
+  const [selectedAlbumForRanking, setSelectedAlbumForRanking] =
+    useState<SpotifyAlbum | null>(null);
+  const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
+  const [showFollowingOnly, setShowFollowingOnly] = useState(false);
+  const [postGenres, setPostGenres] = useState<Map<number, string[]>>(
+    new Map()
+  );
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [showSongRankingModal, setShowSongRankingModal] = useState(false);
+  const [songScore, setSongScore] = useState<number | null>(null);
+  const mutedColor = useThemeColor({}, "textMuted");
+  const primaryColor = useThemeColor({}, "primary");
+  const textColor = useThemeColor({}, "text");
+  const borderColor = useThemeColor({}, "border");
+  const accentColor = useThemeColor({}, "accent");
+  const { user, token } = useAuth();
+  const surfaceColor = useThemeColor({}, "surface");
   const spotifyAPI = useSpotifyAPI();
+  const insets = useSafeAreaInsets();
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true'
-        }
+
+      const headers: Record<string, string> = {
+        "ngrok-skip-browser-warning": "true",
+      };
+
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const url = new URL(`${API.BACKEND_URL}/api/posts`);
+      if (showFollowingOnly && token) {
+        url.searchParams.append("following", "true");
+      }
+
+      const response = await fetch(url.toString(), {
+        headers,
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      setFeedData(data.posts || []);
+      const posts = data.posts || [];
+
+      // Fetch comments for each post
+      const postsWithComments = await Promise.all(
+        posts.map(async (post: FeedPost) => {
+          try {
+            const commentsResponse = await fetch(
+              `${API.BACKEND_URL}/api/posts/${post.post_id}/comments`,
+              { headers }
+            );
+
+            if (commentsResponse.ok) {
+              const commentsData = await commentsResponse.json();
+              return { ...post, comments: commentsData.comments || [] };
+            }
+            return { ...post, comments: [] };
+          } catch (err) {
+            console.error(
+              `Error fetching comments for post ${post.post_id}:`,
+              err
+            );
+            return { ...post, comments: [] };
+          }
+        })
+      );
+
+      setFeedData(postsWithComments);
+
+      // Fetch genres for posts with songs
+      fetchGenresForPosts(postsWithComments);
     } catch (err) {
-      console.error('Error fetching posts:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch posts');
+      console.error("Error fetching posts:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch posts");
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchGenresForPosts = async (posts: FeedPost[]) => {
+    try {
+      const genresMap = new Map<number, string[]>();
+      const allGenres = new Set<string>();
+
+      // Fetch genres for each post with a song
+      await Promise.all(
+        posts.map(async (post) => {
+          if (post.songs?.spotify_id) {
+            try {
+              // Get track details to get artist IDs
+              const track = await spotifyAPI.getTrack(post.songs.spotify_id);
+
+              if (track.artists && track.artists.length > 0) {
+                // Get artist details for genres
+                const artistIds = track.artists.map((a: any) => a.id);
+                const artistsData = await spotifyAPI.getArtists(artistIds);
+
+                // Collect all genres from all artists
+                const genres: string[] = [];
+                artistsData.artists?.forEach((artist: any) => {
+                  if (artist.genres && artist.genres.length > 0) {
+                    genres.push(...artist.genres);
+                  }
+                });
+
+                if (genres.length > 0) {
+                  genresMap.set(post.post_id, genres);
+                  genres.forEach((g) => allGenres.add(g));
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching genres for post ${post.post_id}:`,
+                error
+              );
+            }
+          }
+        })
+      );
+
+      setPostGenres(genresMap);
+
+      // Sort genres by frequency and take top 10
+      const genreFrequency = new Map<string, number>();
+      genresMap.forEach((genres) => {
+        genres.forEach((genre) => {
+          genreFrequency.set(genre, (genreFrequency.get(genre) || 0) + 1);
+        });
+      });
+
+      const sortedGenres = Array.from(genreFrequency.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([genre]) => genre);
+
+      setAvailableGenres(sortedGenres);
+    } catch (error) {
+      console.error("Error fetching genres:", error);
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [showFollowingOnly]);
 
-  const handleLike = (postId: number) => {
-    setFeedData(prevData =>
-      prevData.map(post =>
+  const handleLike = (
+    postId: number,
+    newLikeCount: number,
+    isLiked: boolean
+  ) => {
+    setFeedData((prevData) =>
+      prevData.map((post) =>
         post.post_id === postId
-          ? { ...post, like_count: post.like_count + 1 }
+          ? { ...post, like_count: newLikeCount, isLiked: isLiked }
           : post
       )
     );
@@ -111,74 +225,146 @@ export default function FeedScreen() {
 
   const handleComment = (postId: number) => {
     // Navigate to comments or show comment modal
-    console.log('Navigate to comments for post:', postId);
+    console.log("Navigate to comments for post:", postId);
   };
 
-  const handleCreatePost = async () => {
-    if (!user) {
-      Alert.alert('Error', 'You must be logged in to create a post');
-      return;
-    }
+  const handleCommentAdded = (postId: number, comment: Comment) => {
+    setFeedData((prevData) =>
+      prevData.map((post) =>
+        post.post_id === postId
+          ? {
+              ...post,
+              comments: [...(post.comments || []), comment],
+            }
+          : post
+      )
+    );
+  };
 
-    if (!postContent.trim()) {
-      Alert.alert('Error', 'Please enter some content for your post');
-      return;
-    }
-
-    if (!selectedSong) {
-      Alert.alert('Error', 'Please select a song for your post');
+  const submitPost = async (scoreToUse: number | null = null) => {
+    if (!user || !token) {
+      console.error("Cannot post - user or token missing:", { user: !!user, token: !!token });
+      Alert.alert("Error", "You must be logged in to create a post");
       return;
     }
 
     try {
       setIsPosting(true);
-      
-      console.log('Creating post with data:', {
-        userId: user.id,
-        content: postContent.trim(),
-        spotifyId: selectedSong.spotifyId,
-        visibility: 'public'
-      });
-      
-      const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          content: postContent.trim(),
-          spotifyId: selectedSong.spotifyId,
-          visibility: 'public'
-        })
-      });
 
-      console.log('Post creation response status:', response.status);
+      // Refresh the session to ensure we have a valid token
+      const supabase = getSupabase();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        console.error("Session refresh failed:", sessionError);
+        Alert.alert("Error", "Your session has expired. Please log in again.");
+        setIsPosting(false);
+        return;
+      }
+
+      const freshToken = session.access_token;
+      console.log("Using refreshed token for post");
+
+      const requestBody: any = {
+        content: postContent.trim() || "",
+        visibility: "public",
+      };
+
+      if (selectedSong) {
+        requestBody.spotifyId = selectedSong.spotifyId;
+        // Add song score if provided
+        const finalScore = scoreToUse !== null ? scoreToUse : songScore;
+        if (finalScore) {
+          requestBody.songRank = finalScore;
+        }
+      } else if (selectedAlbum) {
+        // Get the top-ranked song (rank 1) for the main song display
+        const topRankedSong = selectedAlbum.rankedSongs
+          .filter((song) => song.rank > 0)
+          .sort((a, b) => a.rank - b.rank)[0];
+
+        if (!topRankedSong) {
+          Alert.alert("Error", "Please rank at least one song from the album");
+          setIsPosting(false);
+          return;
+        }
+
+        // Send top-ranked song's spotifyId for main song display
+        requestBody.spotifyId = topRankedSong.spotifyId;
+        // Send album ID and full rankings for storage
+        requestBody.albumId = selectedAlbum.spotifyId;
+        requestBody.albumRankings = selectedAlbum.rankedSongs
+          .filter((song) => song.rank > 0)
+          .sort((a, b) => a.rank - b.rank)
+          .map((song) => ({
+            spotifyId: song.spotifyId,
+            rank: song.rank,
+          }));
+      }
+
+      console.log("Creating post with body:", requestBody);
+      console.log("Fresh token starts with:", freshToken?.substring(0, 20) + "...");
+
+      const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${freshToken}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Post creation error:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: Failed to create post`);
+        console.error("Post creation error:", { status: response.status, errorData });
+        throw new Error(
+          errorData.message || `HTTP ${response.status}: Failed to create post`
+        );
       }
 
       const result = await response.json();
-      console.log('Post created successfully:', result);
 
       // Clear form
-      setPostContent('');
+      setPostContent("");
       setSelectedSong(null);
-      
+      setSelectedAlbum(null);
+      setSongScore(null);
+
       // Refresh feed
       await fetchPosts();
-      
-      Alert.alert('Success', 'Post created successfully!');
+
+      Alert.alert("Success", "Post created successfully!");
     } catch (err) {
-      console.error('Error creating post:', err);
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to create post');
+      console.error("Error creating post:", err);
+      Alert.alert(
+        "Error",
+        err instanceof Error ? err.message : "Failed to create post"
+      );
     } finally {
       setIsPosting(false);
     }
+  };
+
+  const handleCreatePost = async () => {
+    if (!user) {
+      Alert.alert("Error", "You must be logged in to create a post");
+      return;
+    }
+
+    if (!selectedSong && !selectedAlbum) {
+      Alert.alert("Error", "Please select a song or album for your post");
+      return;
+    }
+
+    // If posting a song and haven't ranked it yet, show ranking modal first
+    if (selectedSong && songScore === null) {
+      setShowSongRankingModal(true);
+      return;
+    }
+
+    // Otherwise proceed with posting
+    await submitPost();
   };
 
   const handleSelectSong = () => {
@@ -193,626 +379,384 @@ export default function FeedScreen() {
 
     try {
       setIsSearching(true);
-      const response = await spotifyAPI.search(query, 'track', 20);
+      const response = await spotifyAPI.search(query, "track", 20);
       setSearchResults(response.tracks.items);
     } catch (error) {
-      console.error('Error searching tracks:', error);
-      Alert.alert('Error', 'Failed to search for tracks. Please try again.');
+      console.error("Error searching tracks:", error);
+      Alert.alert("Error", "Failed to search for tracks. Please try again.");
     } finally {
       setIsSearching(false);
     }
   };
 
   const handleSongSelect = (track: SpotifyTrack) => {
-    setSelectedSong({
+    const song = {
       spotifyId: track.id,
       name: track.name,
-      artist: track.artists.map(artist => artist.name).join(', ')
-    });
+      artist: track.artists.map((artist) => artist.name).join(", "),
+      coverArtUrl: track.album.images[0]?.url || null,
+    };
+    setSelectedSong(song);
     setShowSearchModal(false);
-    setSearchQuery('');
+    setSearchQuery("");
     setSearchResults([]);
+    // Don't show ranking modal here - will show after clicking post button
+  };
+
+  const handleRankingComplete = async (score: number | null) => {
+    setSongScore(score);
+    setShowSongRankingModal(false);
+
+    // After ranking is complete, proceed with post creation
+    // Pass the score directly to avoid state timing issues
+    // If score is null (skipped), still create the post but without a ranking
+    await submitPost(score);
   };
 
   const handleCloseSearchModal = () => {
     setShowSearchModal(false);
-    setSearchQuery('');
+    setSearchQuery("");
     setSearchResults([]);
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'Just now';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
+  const handleSelectAlbum = () => {
+    setShowAlbumSearchModal(true);
+  };
+
+  const handleAlbumSearch = async (query: string) => {
+    if (!query.trim()) {
+      setAlbumSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsAlbumSearching(true);
+      const response = await spotifyAPI.search(query, "album", 20);
+      setAlbumSearchResults(response.albums.items);
+    } catch (error) {
+      console.error("Error searching albums:", error);
+      Alert.alert("Error", "Failed to search for albums. Please try again.");
+    } finally {
+      setIsAlbumSearching(false);
     }
   };
 
-  const renderPost = (post: FeedPost) => (
-    <View key={post.post_id} style={styles.postContainer}>
-      {/* User Header */}
-      <View style={styles.userHeader}>
-        <View style={styles.avatarPlaceholder}>
-          <IconSymbol name="person.fill" size={16} color={mutedColor} />
-        </View>
-        <View style={styles.userInfo}>
-          <ThemedText style={styles.username}>
-            {post.users.display_name || post.users.username}
-          </ThemedText>
-          <ThemedText style={styles.timestamp}>
-            {formatTimestamp(post.created_at)}
-          </ThemedText>
-        </View>
-      </View>
+  const handleAlbumSelect = async (album: SpotifyAlbumSearchResult) => {
+    try {
+      setIsLoadingAlbum(true);
+      setShowAlbumSearchModal(false);
 
-      {/* Post Content */}
-      <ThemedText style={styles.postContent}>{post.content}</ThemedText>
+      // Fetch full album details including tracks
+      const albumData = await spotifyAPI.getAlbum(album.id);
+      setSelectedAlbumForRanking(albumData);
+      setShowAlbumRankingModal(true);
+    } catch (error) {
+      console.error("Error fetching album:", error);
+      Alert.alert("Error", "Failed to load album. Please try again.");
+    } finally {
+      setIsLoadingAlbum(false);
+    }
+  };
 
-      {/* Song Card */}
-      <View style={styles.songCard}>
-        <Image
-          source={{ uri: post.songs.cover_art_url || 'https://via.placeholder.com/40' }}
-          style={styles.songImage}
-        />
-        <View style={styles.songInfo}>
-          <ThemedText style={styles.songTitle}>{post.songs.song_name}</ThemedText>
-          <ThemedText style={styles.songArtist}>{post.songs.artist_name}</ThemedText>
-        </View>
-        <TouchableOpacity style={styles.playButton}>
-          <IconSymbol name="play.fill" size={18} color={primaryColor} />
-        </TouchableOpacity>
-      </View>
+  const handleAlbumRankingConfirm = (rankedSongs: RankedSong[]) => {
+    if (!selectedAlbumForRanking) return;
 
-      {/* Actions */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleLike(post.post_id)}
-        >
-          <IconSymbol name="heart" size={16} color={mutedColor} />
-          <ThemedText style={styles.actionText}>{post.like_count}</ThemedText>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleComment(post.post_id)}
-        >
-          <IconSymbol name="bubble.left" size={16} color={mutedColor} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    setSelectedAlbum({
+      spotifyId: selectedAlbumForRanking.id,
+      name: selectedAlbumForRanking.name,
+      artist: selectedAlbumForRanking.artists.map((a) => a.name).join(", "),
+      coverArtUrl: selectedAlbumForRanking.images[0]?.url || "",
+      rankedSongs,
+    });
+
+    setShowAlbumRankingModal(false);
+    setSelectedAlbumForRanking(null);
+  };
+
+  const handleCloseAlbumSearchModal = () => {
+    setShowAlbumSearchModal(false);
+    setAlbumSearchQuery("");
+    setAlbumSearchResults([]);
+  };
+
+  const handleCloseAlbumRankingModal = () => {
+    setShowAlbumRankingModal(false);
+    setSelectedAlbumForRanking(null);
+  };
 
   return (
-    <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        {/* Small Banner */}
-        <View style={styles.banner}>
-          <ThemedText style={styles.bannerText}>Melodi</ThemedText>
-        </View>
-      
-      {/* Create Post Section */}
-      <View style={styles.createPostContainer}>
-        <View style={styles.createPostHeader}>
-          <View style={styles.avatarPlaceholder}>
-            <IconSymbol name="person.fill" size={16} color={mutedColor} />
-          </View>
-          <ThemedText style={styles.createPostLabel}>Share what you're listening to</ThemedText>
-        </View>
-        
-        <TextInput
-          style={[styles.postInput, { color: mutedColor }]}
-          placeholder="What's on your mind?"
-          placeholderTextColor={mutedColor}
-          value={postContent}
-          onChangeText={setPostContent}
-          multiline
-          maxLength={500}
-        />
-        
-        {selectedSong ? (
-          <View style={styles.selectedSongContainer}>
-            <ThemedText style={styles.selectedSongText}>
-              🎵 {selectedSong.name} - {selectedSong.artist}
-            </ThemedText>
-            <TouchableOpacity onPress={() => setSelectedSong(null)}>
-              <IconSymbol name="xmark.circle.fill" size={16} color={mutedColor} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.selectSongButton} onPress={handleSelectSong}>
-            <IconSymbol name="music.note" size={16} color={primaryColor} />
-            <ThemedText style={styles.selectSongText}>Select a song</ThemedText>
-          </TouchableOpacity>
-        )}
-        
-        <View style={styles.createPostActions}>
-          <ThemedText style={styles.characterCount}>{postContent.length}/500</ThemedText>
-          <TouchableOpacity
-            style={[styles.postButton, (!postContent.trim() || !selectedSong || isPosting) && styles.postButtonDisabled]}
-            onPress={handleCreatePost}
-            disabled={!postContent.trim() || !selectedSong || isPosting}
-          >
-            {isPosting ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <ThemedText style={styles.postButtonText}>Post</ThemedText>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      <View style={styles.feedContainer}>
-        {loading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={primaryColor} />
-            <ThemedText style={styles.loadingText}>Loading posts...</ThemedText>
-          </View>
-        ) : error ? (
-          <View style={styles.errorState}>
-            <IconSymbol 
-              name="exclamationmark.triangle" 
-              size={48} 
-              color={mutedColor} 
-              style={styles.errorIcon}
-            />
-            <ThemedText style={styles.errorTitle}>Failed to load posts</ThemedText>
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={fetchPosts}
-            >
-              <ThemedText style={styles.retryButtonText}>Try Again</ThemedText>
-            </TouchableOpacity>
-          </View>
-        ) : feedData.length === 0 ? (
-          <View style={styles.emptyState}>
-            <IconSymbol 
-              name="music.note.list" 
-              size={48} 
-              color={mutedColor} 
-              style={styles.emptyStateIcon}
-            />
-            <ThemedText style={styles.emptyStateTitle}>No posts yet</ThemedText>
-            <ThemedText style={styles.emptyStateText}>
-              When your friends start sharing music, their posts will appear here.
-            </ThemedText>
-          </View>
-        ) : (
-          feedData.map(renderPost)
-        )}
-      </View>
-    </ScrollView>
-
-    {/* Song Search Modal */}
-    <Modal
-      visible={showSearchModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleCloseSearchModal}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={handleCloseSearchModal}>
-            <IconSymbol name="xmark" size={20} color={mutedColor} />
-          </TouchableOpacity>
-          <ThemedText style={styles.modalTitle}>Search for a song</ThemedText>
-          <View style={{ width: 20 }} />
+    <ThemedView style={feedStyles.container}>
+      <ScrollView
+        style={feedStyles.scrollView}
+        contentContainerStyle={feedStyles.contentContainer}
+      >
+        {/* Header */}
+        <View style={[feedStyles.header, { paddingTop: insets.top + 30 }]}>
+          <ThemedText style={feedStyles.headerTitle}>
+            Good{" "}
+            {new Date().getHours() < 12
+              ? "morning"
+              : new Date().getHours() < 18
+              ? "afternoon"
+              : "evening"}
+            , {user?.user_metadata?.username}!
+          </ThemedText>
         </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={[styles.searchInput, { color: mutedColor }]}
-            placeholder="Search songs..."
-            placeholderTextColor={mutedColor}
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              handleSearch(text);
-            }}
-            autoFocus
+        {/* Create Post Section */}
+        <View style={feedStyles.feedContainer}>
+          <CreatePostForm
+            postContent={postContent}
+            setPostContent={setPostContent}
+            selectedSong={selectedSong}
+            selectedAlbum={selectedAlbum}
+            onSelectSong={handleSelectSong}
+            onSelectAlbum={handleSelectAlbum}
+            onRemoveSong={() => setSelectedSong(null)}
+            onRemoveAlbum={() => setSelectedAlbum(null)}
+            onCreatePost={handleCreatePost}
+            isPosting={isPosting}
+            mutedColor={mutedColor}
+            primaryColor={primaryColor}
+            surfaceColor={surfaceColor}
+            textColor={textColor}
+            borderColor={borderColor}
+            accentColor={accentColor}
           />
-          {isSearching && (
-            <ActivityIndicator size="small" color={primaryColor} style={styles.searchLoader} />
-          )}
         </View>
-
-        <ScrollView style={styles.searchResultsContainer}>
-          {searchResults.length > 0 ? (
-            searchResults.map((track) => (
-              <TouchableOpacity
-                key={track.id}
-                style={styles.searchResultItem}
-                onPress={() => handleSongSelect(track)}
-              >
-                <Image
-                  source={{ 
-                    uri: track.album.images[0]?.url || 'https://via.placeholder.com/50' 
-                  }}
-                  style={styles.searchResultImage}
-                />
-                <View style={styles.searchResultInfo}>
-                  <ThemedText style={styles.searchResultTitle}>{track.name}</ThemedText>
-                  <ThemedText style={styles.searchResultArtist}>
-                    {track.artists.map(artist => artist.name).join(', ')}
-                  </ThemedText>
-                  <ThemedText style={styles.searchResultAlbum}>{track.album.name}</ThemedText>
-                </View>
-                <IconSymbol name="chevron.right" size={16} color={mutedColor} />
-              </TouchableOpacity>
-            ))
-          ) : searchQuery.trim() && !isSearching ? (
-            <View style={styles.noResultsContainer}>
-              <IconSymbol name="music.note" size={32} color={mutedColor} style={styles.noResultsIcon} />
-              <ThemedText style={styles.noResultsText}>No songs found</ThemedText>
-              <ThemedText style={styles.noResultsSubtext}>Try a different search term</ThemedText>
+        {/* Feed Filter Toggle */}
+        {user && token && (
+          <View style={[feedStyles.feedContainer, { paddingVertical: 12 }]}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                backgroundColor: surfaceColor,
+                borderRadius: 15,
+              }}
+            >
+              <ThemedText style={{ fontSize: 16, color: textColor }}>
+                From my Followings
+              </ThemedText>
+              <Switch
+                value={showFollowingOnly}
+                onValueChange={setShowFollowingOnly}
+                trackColor={{
+                  false: mutedColor + "40",
+                  true: primaryColor + "80",
+                }}
+                thumbColor={showFollowingOnly ? primaryColor : "#f4f3f4"}
+              />
             </View>
-          ) : null}
-        </ScrollView>
-      </View>
-    </Modal>
-    </>
+          </View>
+        )}
+
+        {/* Genre Filter Pills */}
+        {availableGenres.length > 0 && (
+          <View style={[feedStyles.feedContainer, { paddingVertical: 8 }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+            >
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor:
+                    selectedGenre === null ? primaryColor : surfaceColor,
+                  borderWidth: 1,
+                  borderColor:
+                    selectedGenre === null ? primaryColor : borderColor,
+                }}
+                onPress={() => setSelectedGenre(null)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: selectedGenre === null ? "#fff" : textColor,
+                  }}
+                >
+                  All
+                </ThemedText>
+              </TouchableOpacity>
+              {availableGenres.map((genre) => (
+                <TouchableOpacity
+                  key={genre}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor:
+                      selectedGenre === genre ? primaryColor : surfaceColor,
+                    borderWidth: 1,
+                    borderColor:
+                      selectedGenre === genre ? primaryColor : borderColor,
+                  }}
+                  onPress={() => setSelectedGenre(genre)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: selectedGenre === genre ? "#fff" : textColor,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {genre}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        <View style={feedStyles.feedContainer}>
+          <FeedState
+            loading={loading}
+            error={error}
+            feedDataLength={feedData.length}
+            onRetry={fetchPosts}
+            primaryColor={primaryColor}
+            mutedColor={mutedColor}
+          />
+
+          {!loading && !error && feedData.length > 0 && (
+            <>
+              {feedData
+                .filter((post) => {
+                  // If no genre is selected, show all posts
+                  if (!selectedGenre) return true;
+
+                  // Filter by selected genre
+                  const genres = postGenres.get(post.post_id);
+                  return genres?.includes(selectedGenre) || false;
+                })
+                .map((post, index, filteredArray) => (
+                  <Fragment key={post.post_id}>
+                    <PostCard
+                      post={post}
+                      onLike={handleLike}
+                      onComment={handleComment}
+                      onCommentAdded={handleCommentAdded}
+                      surfaceColor={surfaceColor}
+                      mutedColor={mutedColor}
+                      primaryColor={primaryColor}
+                      textColor={textColor}
+                      borderColor={borderColor}
+                      authToken={token || undefined}
+                    />
+
+                    {index < filteredArray.length - 1 && (
+                      <View
+                        style={{
+                          height: 2,
+                          width: "95%",
+                          backgroundColor: mutedColor + "20", // subtle opacity
+                          marginVertical: 10,
+                          borderRadius: 4,
+                          alignSelf: "center",
+                        }}
+                      />
+                    )}
+                  </Fragment>
+                ))}
+            </>
+          )}
+
+          {/* Show empty state when genre filter has no results */}
+          {!loading &&
+            !error &&
+            feedData.length > 0 &&
+            selectedGenre &&
+            feedData.filter((post) =>
+              postGenres.get(post.post_id)?.includes(selectedGenre)
+            ).length === 0 && (
+              <View style={feedStyles.emptyState}>
+                <ThemedText
+                  style={[feedStyles.emptyStateTitle, { color: textColor }]}
+                >
+                  No posts found
+                </ThemedText>
+                <ThemedText
+                  style={[feedStyles.emptyStateText, { color: mutedColor }]}
+                >
+                  No posts match the selected genre. Try selecting a different
+                  genre.
+                </ThemedText>
+              </View>
+            )}
+        </View>
+      </ScrollView>
+
+      {/* Song Search Modal */}
+      <SongSearchModal
+        visible={showSearchModal}
+        searchQuery={searchQuery}
+        setSearchQuery={(text) => {
+          setSearchQuery(text);
+          handleSearch(text);
+        }}
+        searchResults={searchResults}
+        isSearching={isSearching}
+        onSongSelect={handleSongSelect}
+        onClose={handleCloseSearchModal}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        insets={insets}
+      />
+
+      {/* Song Ranking Modal */}
+      <SongRankingModal
+        visible={showSongRankingModal}
+        onClose={() => setShowSongRankingModal(false)}
+        onRankingComplete={handleRankingComplete}
+        selectedSong={selectedSong}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        surfaceColor={surfaceColor}
+        borderColor={borderColor}
+      />
+
+      {/* Album Search Modal */}
+      <AlbumSearchModal
+        visible={showAlbumSearchModal}
+        searchQuery={albumSearchQuery}
+        setSearchQuery={(text) => {
+          setAlbumSearchQuery(text);
+          handleAlbumSearch(text);
+        }}
+        searchResults={albumSearchResults}
+        isSearching={isAlbumSearching}
+        onAlbumSelect={handleAlbumSelect}
+        onClose={handleCloseAlbumSearchModal}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        insets={insets}
+      />
+
+      {/* Album Ranking Modal */}
+      <AlbumRankingModal
+        visible={showAlbumRankingModal}
+        album={selectedAlbumForRanking}
+        isLoading={isLoadingAlbum}
+        onConfirm={handleAlbumRankingConfirm}
+        onClose={handleCloseAlbumRankingModal}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        surfaceColor={surfaceColor}
+        borderColor={borderColor}
+        insets={insets}
+      />
+    </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingTop: 20,
-  },
-  banner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
-  bannerText: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  createPostContainer: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  createPostHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  createPostLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
-    opacity: 0.8,
-  },
-  postInput: {
-    fontSize: 14,
-    lineHeight: 20,
-    minHeight: 60,
-    maxHeight: 120,
-    textAlignVertical: 'top',
-    marginBottom: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 6,
-    padding: 8,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  selectedSongContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderRadius: 6,
-    marginBottom: 12,
-  },
-  selectedSongText: {
-    fontSize: 12,
-    flex: 1,
-    opacity: 0.8,
-  },
-  selectSongButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 6,
-    marginBottom: 12,
-    gap: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  selectSongText: {
-    fontSize: 12,
-    opacity: 0.8,
-  },
-  createPostActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  characterCount: {
-    fontSize: 11,
-    opacity: 0.5,
-  },
-  postButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    minWidth: 60,
-    alignItems: 'center',
-  },
-  postButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    opacity: 0.5,
-  },
-  postButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'black',
-  },
-  feedContainer: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  postContainer: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 0.2,
-    borderColor: 'rgba(0, 0, 0, 0.2)',
-  },
-  userHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  username: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  timestamp: {
-    fontSize: 11,
-    opacity: 0.5,
-    marginTop: 1,
-  },
-  postContent: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  songCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    marginBottom: 8,
-  },
-  songImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 4,
-    marginRight: 10,
-  },
-  songInfo: {
-    flex: 1,
-  },
-  songTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 1,
-  },
-  songArtist: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-  playButton: {
-    padding: 4,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionText: {
-    fontSize: 12,
-    opacity: 0.6,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  emptyStateIcon: {
-    marginBottom: 12,
-    opacity: 0.4,
-  },
-  emptyStateTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  emptyStateText: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  loadingState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  loadingText: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginTop: 12,
-  },
-  errorState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-  },
-  errorIcon: {
-    marginBottom: 12,
-    opacity: 0.4,
-  },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  retryButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderRadius: 8,
-    borderWidth: 0.5,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  searchLoader: {
-    marginLeft: 8,
-  },
-  searchResultsContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  searchResultImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  searchResultInfo: {
-    flex: 1,
-  },
-  searchResultTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  searchResultArtist: {
-    fontSize: 12,
-    opacity: 0.8,
-    marginBottom: 1,
-  },
-  searchResultAlbum: {
-    fontSize: 11,
-    opacity: 0.6,
-  },
-  noResultsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  noResultsIcon: {
-    marginBottom: 16,
-    opacity: 0.4,
-  },
-  noResultsText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  noResultsSubtext: {
-    fontSize: 14,
-    opacity: 0.6,
-    textAlign: 'center',
-  },
-});

@@ -1,56 +1,29 @@
-import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { PostCard } from '@/components/feed/PostCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useThemeColor } from '@/hooks/use-theme-color';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
+import { FeedPost } from '@/types/feed';
 
 interface UserProfile {
   id: string;
   username: string;
-  displayName: string;
+  display_name: string;
   email: string;
   bio?: string;
-  favoriteGenres?: string;
-  isPublic: boolean;
+  favorite_genres?: string;
+  is_public: boolean;
   stats: {
     totalPosts: number;
     totalFollowers: number;
     totalFollowing: number;
   };
-  preferences: {
-    showTopTracks: boolean;
-    showTopArtists: boolean;
-    showListeningStats: boolean;
-  };
-}
-
-interface TopTrack {
-  id: string;
-  name: string;
-  artist: string;
-  albumArt: string;
-}
-
-interface TopArtist {
-  id: string;
-  name: string;
-  image: string;
-  genres: string[];
-}
-
-interface ListeningStats {
-  totalMinutes: number;
-  topGenre: string;
-  danceability: number;
-  energy: number;
 }
 
 export default function PublicProfileScreen() {
@@ -58,106 +31,68 @@ export default function PublicProfileScreen() {
   const { user } = useAuth();
   const primaryColor = useThemeColor({}, 'primary');
   const mutedColor = useThemeColor({}, 'textMuted');
+  const textColor = useThemeColor({}, 'text');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
 
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
-  const [topArtists, setTopArtists] = useState<TopArtist[]>([]);
-  const [listeningStats, setListeningStats] = useState<ListeningStats | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
     const loadUserProfile = async () => {
       setLoading(true);
       try {
-        // TODO: API call to fetch user profile
         console.log('Loading profile for user:', id);
         
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Fetch user profile from backend
+        const response = await fetch(`${API.BACKEND_URL}/api/auth/user/${id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('User profile loaded:', result);
         
-        // Mock data
-        setUserProfile({
-          id: id || '',
-          username: `user_${id}`,
-          displayName: 'Music Enthusiast',
-          email: `user${id}@example.com`,
-          bio: 'Love discovering new music and sharing my favorites with friends! 🎵',
-          favoriteGenres: 'Pop, R&B, Indie',
-          isPublic: true,
-          stats: {
-            totalPosts: 35,
-            totalFollowers: 256,
-            totalFollowing: 142,
-          },
-          preferences: {
-            showTopTracks: true,
-            showTopArtists: true,
-            showListeningStats: true,
-          },
-        });
+        setUserProfile(result.user);
 
-        setTopTracks([
-          {
-            id: '1',
-            name: 'Anti-Hero',
-            artist: 'Taylor Swift',
-            albumArt: 'https://i.scdn.co/image/ab67616d0000b273e0b60c608586d88252b8fbc0',
-          },
-          {
-            id: '2',
-            name: 'Flowers',
-            artist: 'Miley Cyrus',
-            albumArt: 'https://i.scdn.co/image/ab67616d0000b273f94b35c1a21a6cff0e9e987e',
-          },
-          {
-            id: '3',
-            name: 'As It Was',
-            artist: 'Harry Styles',
-            albumArt: 'https://i.scdn.co/image/ab67616d0000b2732e8ed79e177ff6011076f5f0',
-          },
-          {
-            id: '4',
-            name: 'vampire',
-            artist: 'Olivia Rodrigo',
-            albumArt: 'https://i.scdn.co/image/ab67616d0000b273e85259a1cae29a8d91f2093d',
-          },
-        ]);
+        // Check if already following from API
+        if (token && user?.id !== id) {
+          try {
+            const followStatusResponse = await fetch(
+              `${API.BACKEND_URL}/api/users/${id}/following-status`,
+              {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              }
+            );
 
-        setTopArtists([
-          {
-            id: '1',
-            name: 'Taylor Swift',
-            image: 'https://i.scdn.co/image/ab6761610000e5ebe672b5f553298dcdccb0e676',
-            genres: ['pop', 'country'],
-          },
-          {
-            id: '2',
-            name: 'Harry Styles',
-            image: 'https://i.scdn.co/image/ab6761610000e5eb77dd5f3f3f8b2267c6b4a81e',
-            genres: ['pop', 'rock'],
-          },
-          {
-            id: '3',
-            name: 'Olivia Rodrigo',
-            image: 'https://i.scdn.co/image/ab6761610000e5ebe03a98785f3658f0b6461ec4',
-            genres: ['pop', 'alternative'],
-          },
-        ]);
-
-        setListeningStats({
-          totalMinutes: 8920,
-          topGenre: 'Pop',
-          danceability: 68,
-          energy: 71,
-        });
-
-        // Check if already following
-        setIsFollowing(false); // TODO: check from API
+            if (followStatusResponse.ok) {
+              const followStatusResult = await followStatusResponse.json();
+              setIsFollowing(followStatusResult.isFollowing || false);
+            }
+          } catch (error) {
+            console.error('Error checking follow status:', error);
+            setIsFollowing(false);
+          }
+        } else {
+          setIsFollowing(false);
+        }
       } catch (error) {
         console.error('Error loading user profile:', error);
+        setUserProfile(null);
       } finally {
         setLoading(false);
       }
@@ -166,16 +101,152 @@ export default function PublicProfileScreen() {
     if (id) {
       loadUserProfile();
     }
-  }, [id]);
+  }, [id, token, user]);
+
+  // Fetch user posts
+  useEffect(() => {
+    const loadUserPosts = async () => {
+      if (!id) return;
+      
+      setPostsLoading(true);
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API.BACKEND_URL}/api/posts/user/${id}`, {
+          method: 'GET',
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('User posts loaded:', result);
+        
+        // Transform the posts to match FeedPost interface
+        const transformedPosts: FeedPost[] = (result.posts || []).map((post: any) => ({
+          post_id: post.post_id,
+          user_id: post.user_id,
+          content: post.content,
+          like_count: post.like_count || 0,
+          visibility: post.visibility,
+          created_at: post.created_at,
+          updated_at: post.updated_at,
+          isLiked: false, // Will be updated if user is authenticated
+          comments: post.comments || [],
+          album_id: post.album_id || null,
+          albumRankings: post.albumRankings || [],
+          songRank: post.songRank || undefined,
+          songScore: post.songScore || undefined,
+          users: {
+            id: post.users?.id || post.user_id,
+            username: post.users?.username || '',
+            display_name: post.users?.display_name || null,
+          },
+          songs: post.songs ? {
+            song_id: post.songs.song_id?.toString() || '',
+            spotify_id: post.songs.spotify_id || '',
+            song_name: post.songs.song_name || '',
+            artist_name: post.songs.artist_name || '',
+            album_name: post.songs.album_name || null,
+            cover_art_url: post.songs.cover_art_url || null,
+          } : null,
+        }));
+
+        setPosts(transformedPosts);
+      } catch (error) {
+        console.error('Error loading user posts:', error);
+        setPosts([]);
+      } finally {
+        setPostsLoading(false);
+      }
+    };
+
+    if (userProfile) {
+      loadUserPosts();
+    }
+  }, [id, userProfile, token]);
 
   const handleFollow = async () => {
+    if (!token) {
+      return;
+    }
+
+    const wasFollowing = isFollowing;
+    const newFollowingState = !isFollowing;
+
+    // Optimistic update
+    setIsFollowing(newFollowingState);
+
     try {
-      // TODO: Implement follow/unfollow API call
-      setIsFollowing(!isFollowing);
-      console.log(isFollowing ? 'Unfollowing user' : 'Following user', id);
+      const endpoint = 'follow';
+      const method = newFollowingState ? 'POST' : 'DELETE';
+
+      const response = await fetch(
+        `${API.BACKEND_URL}/api/users/${id}/${endpoint}`,
+        {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Update user profile stats
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          stats: {
+            ...userProfile.stats,
+            totalFollowers: newFollowingState
+              ? userProfile.stats.totalFollowers + 1
+              : userProfile.stats.totalFollowers - 1,
+          },
+        });
+      }
     } catch (error) {
       console.error('Error following/unfollowing user:', error);
+      // Revert optimistic update
+      setIsFollowing(wasFollowing);
     }
+  };
+
+  const handleLike = (postId: number, newLikeCount: number, isLiked: boolean) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, like_count: newLikeCount, isLiked: isLiked }
+          : post
+      )
+    );
+  };
+
+  const handleComment = (postId: number) => {
+    // Navigate to comments or show comment modal
+    console.log('Navigate to comments for post:', postId);
+  };
+
+  const handleCommentAdded = (postId: number, comment: any) => {
+    setPosts(prevPosts =>
+      prevPosts.map(post =>
+        post.post_id === postId
+          ? { ...post, comments: [...(post.comments || []), comment] }
+          : post
+      )
+    );
   };
 
   const isOwnProfile = user?.id === id;
@@ -191,7 +262,26 @@ export default function PublicProfileScreen() {
     );
   }
 
-  if (!userProfile || !userProfile.isPublic) {
+  if (!userProfile) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={mutedColor} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.emptyContainer}>
+          <IconSymbol name="person.circle.fill" size={64} color={mutedColor} style={styles.emptyIcon} />
+          <ThemedText style={styles.emptyTitle}>Profile Not Found</ThemedText>
+          <ThemedText style={[styles.emptyText, { color: mutedColor }]}>
+            This profile doesn&apos;t exist or couldn&apos;t be loaded.
+          </ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!userProfile.is_public && user?.id !== id) {
     return (
       <ThemedView style={styles.container}>
         <View style={styles.header}>
@@ -201,9 +291,9 @@ export default function PublicProfileScreen() {
         </View>
         <View style={styles.emptyContainer}>
           <IconSymbol name="lock.fill" size={64} color={mutedColor} style={styles.emptyIcon} />
-          <ThemedText style={styles.emptyTitle}>Profile Not Available</ThemedText>
+          <ThemedText style={styles.emptyTitle}>Private Profile</ThemedText>
           <ThemedText style={[styles.emptyText, { color: mutedColor }]}>
-            This profile is private or doesn&apos;t exist.
+            This profile is private.
           </ThemedText>
         </View>
       </ThemedView>
@@ -219,19 +309,27 @@ export default function PublicProfileScreen() {
             <IconSymbol name="chevron.left" size={24} color={mutedColor} />
           </TouchableOpacity>
           <ThemedText style={styles.headerTitle}>Profile</ThemedText>
-          <View style={styles.backButton} />
+          {isOwnProfile && (
+            <TouchableOpacity 
+              onPress={() => router.push('/profile/edit')} 
+              style={styles.backButton}
+            >
+              <IconSymbol name="pencil" size={20} color={primaryColor} />
+            </TouchableOpacity>
+          )}
+          {!isOwnProfile && <View style={styles.backButton} />}
         </View>
 
         {/* Profile Info */}
         <View style={[styles.profileCard, { backgroundColor: surfaceColor, borderColor }]}>
           <View style={styles.avatarContainer}>
             <View style={[styles.avatar, { borderColor: primaryColor }]}>
-              <IconSymbol name="person.fill" size={40} color={primaryColor} />
+              <IconSymbol name="person.circle.fill" size={40} color={primaryColor} />
             </View>
           </View>
           
           <ThemedText style={styles.displayName}>
-            {userProfile.displayName}
+            {userProfile.display_name || userProfile.username}
           </ThemedText>
           
           <ThemedText style={[styles.username, { color: mutedColor }]}>
@@ -244,9 +342,9 @@ export default function PublicProfileScreen() {
             </ThemedText>
           )}
 
-          {userProfile.favoriteGenres && (
+          {userProfile.favorite_genres && (
             <View style={styles.genresContainer}>
-              {userProfile.favoriteGenres.split(',').map((genre, index) => (
+              {userProfile.favorite_genres.split(',').map((genre, index) => (
                 <View key={index} style={[styles.genreTag, { backgroundColor: primaryColor + '20', borderColor: primaryColor }]}>
                   <ThemedText style={[styles.genreText, { color: primaryColor }]}>
                     {genre.trim()}
@@ -263,15 +361,21 @@ export default function PublicProfileScreen() {
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Posts</ThemedText>
             </View>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push(`/followers?userId=${id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{userProfile.stats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
-            </View>
+            </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: borderColor }]} />
-            <View style={styles.statItem}>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={() => router.push(`/following?userId=${id}` as any)}
+            >
               <ThemedText style={styles.statValue}>{userProfile.stats.totalFollowing}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Following</ThemedText>
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Follow Button */}
@@ -295,113 +399,40 @@ export default function PublicProfileScreen() {
           )}
         </View>
 
-        {/* Listening Stats */}
-        {userProfile.preferences.showListeningStats && listeningStats && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Listening Stats</ThemedText>
-            <View style={[styles.card, { backgroundColor: surfaceColor, borderColor }]}>
-              <View style={styles.listeningStatsGrid}>
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="clock.fill" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {Math.round(listeningStats.totalMinutes / 60)}h
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Total Listened
-                  </ThemedText>
-                </View>
-                
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="music.note" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {listeningStats.topGenre}
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Top Genre
-                  </ThemedText>
-                </View>
-
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="figure.dance" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {listeningStats.danceability}%
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Danceability
-                  </ThemedText>
-                </View>
-
-                <View style={styles.listeningStatItem}>
-                  <IconSymbol name="bolt.fill" size={24} color={primaryColor} />
-                  <ThemedText style={styles.listeningStatValue}>
-                    {listeningStats.energy}%
-                  </ThemedText>
-                  <ThemedText style={[styles.listeningStatLabel, { color: mutedColor }]}>
-                    Energy
-                  </ThemedText>
-                </View>
-              </View>
+        {/* Posts Section */}
+        <View style={styles.postsSection}>
+          <ThemedText style={styles.postsSectionTitle}>Posts</ThemedText>
+          {postsLoading ? (
+            <View style={styles.postsLoadingContainer}>
+              <ActivityIndicator size="small" color={primaryColor} />
             </View>
-          </View>
-        )}
-
-        {/* Top Tracks */}
-        {userProfile.preferences.showTopTracks && topTracks.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Top Tracks</ThemedText>
-            
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {topTracks.map((track) => (
-                <TouchableOpacity 
-                  key={track.id} 
-                  style={[styles.trackCard, { width: CARD_WIDTH }]}
-                >
-                  <Image
-                    source={{ uri: track.albumArt }}
-                    style={styles.trackImage}
-                  />
-                  <ThemedText style={styles.trackName} numberOfLines={2}>
-                    {track.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.trackArtist, { color: mutedColor }]} numberOfLines={1}>
-                    {track.artist}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Top Artists */}
-        {userProfile.preferences.showTopArtists && topArtists.length > 0 && (
-          <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Top Artists</ThemedText>
-            
-            <View style={styles.artistsGrid}>
-              {topArtists.map((artist) => (
-                <TouchableOpacity 
-                  key={artist.id} 
-                  style={[styles.artistCard, { backgroundColor: surfaceColor, borderColor }]}
-                >
-                  <Image
-                    source={{ uri: artist.image }}
-                    style={styles.artistImage}
-                  />
-                  <ThemedText style={styles.artistName} numberOfLines={1}>
-                    {artist.name}
-                  </ThemedText>
-                  <ThemedText style={[styles.artistGenres, { color: mutedColor }]} numberOfLines={1}>
-                    {artist.genres.slice(0, 2).join(', ')}
-                  </ThemedText>
-                </TouchableOpacity>
+          ) : posts.length === 0 ? (
+            <View style={styles.emptyPostsContainer}>
+              <IconSymbol name="music.note" size={48} color={mutedColor} style={styles.emptyPostsIcon} />
+              <ThemedText style={[styles.emptyPostsText, { color: mutedColor }]}>
+                No posts yet
+              </ThemedText>
+            </View>
+          ) : (
+            <View style={styles.postsList}>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.post_id}
+                  post={post}
+                  onLike={handleLike}
+                  onComment={handleComment}
+                  onCommentAdded={handleCommentAdded}
+                  surfaceColor={surfaceColor}
+                  mutedColor={mutedColor}
+                  primaryColor={primaryColor}
+                  textColor={textColor}
+                  borderColor={borderColor}
+                  authToken={token}
+                />
               ))}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         <View style={styles.bottomPadding} />
       </ScrollView>
@@ -548,92 +579,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
+  bottomPadding: {
+    height: 100,
   },
-  sectionTitle: {
-    fontSize: 18,
+  postsSection: {
+    marginTop: 24,
+    marginHorizontal: 16,
+  },
+  postsSectionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
   },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+  postsLoadingContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
   },
-  listeningStatsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  emptyPostsContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyPostsIcon: {
+    marginBottom: 12,
+    opacity: 0.4,
+  },
+  emptyPostsText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  postsList: {
     gap: 16,
   },
-  listeningStatItem: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-    padding: 12,
-  },
-  listeningStatValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  listeningStatLabel: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  horizontalScroll: {
-    paddingRight: 16,
-    gap: 12,
-  },
-  trackCard: {
-    marginRight: 12,
-  },
-  trackImage: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  trackName: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  trackArtist: {
-    fontSize: 12,
-  },
-  artistsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  artistCard: {
-    width: (width - 48) / 3,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  artistImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 8,
-  },
-  artistName: {
-    fontSize: 13,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  artistGenres: {
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  bottomPadding: {
-    height: 40,
-  },
 });
-
