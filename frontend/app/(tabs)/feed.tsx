@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, ScrollView, Switch, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AlbumRankingModal } from "@/components/feed/AlbumRankingModal";
@@ -36,6 +36,7 @@ export default function FeedScreen() {
   const [showAlbumRankingModal, setShowAlbumRankingModal] = useState(false);
   const [selectedAlbumForRanking, setSelectedAlbumForRanking] = useState<SpotifyAlbum | null>(null);
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
+  const [showFollowingOnly, setShowFollowingOnly] = useState(false);
   const mutedColor = useThemeColor({}, "textMuted");
   const primaryColor = useThemeColor({}, "primary");
   const textColor = useThemeColor({}, "text");
@@ -59,7 +60,12 @@ export default function FeedScreen() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
+      const url = new URL(`${API.BACKEND_URL}/api/posts`);
+      if (showFollowingOnly && token) {
+        url.searchParams.append("following", "true");
+      }
+
+      const response = await fetch(url.toString(), {
         headers,
       });
 
@@ -105,7 +111,7 @@ export default function FeedScreen() {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [showFollowingOnly]);
 
   const handleLike = (
     postId: number,
@@ -347,6 +353,33 @@ export default function FeedScreen() {
             , {user?.user_metadata?.username}!
           </ThemedText>
         </View>
+
+        {/* Feed Filter Toggle */}
+        {user && token && (
+          <View style={[feedStyles.feedContainer, { paddingVertical: 12 }]}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                backgroundColor: surfaceColor,
+                borderRadius: 12,
+              }}
+            >
+              <ThemedText style={{ fontSize: 16, color: textColor }}>
+                Show only posts from people I follow
+              </ThemedText>
+              <Switch
+                value={showFollowingOnly}
+                onValueChange={setShowFollowingOnly}
+                trackColor={{ false: mutedColor + "40", true: primaryColor + "80" }}
+                thumbColor={showFollowingOnly ? primaryColor : "#f4f3f4"}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Create Post Section */}
         <View style={feedStyles.feedContainer}>

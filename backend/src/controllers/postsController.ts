@@ -262,17 +262,39 @@ export const getPostsByUserId = async (req: Request, res: Response) => {
 // Get all posts (for feed functionality - bonus)
 export const getAllPosts = async (req: AuthRequest, res: Response) => {
   try {
-    const { limit = 20, offset = 0, visibility = "public" } = req.query;
+    const { limit = 20, offset = 0, visibility = "public", following = "false" } = req.query;
     const userId = req.userId; // Optional user ID for like status
 
     const supabase = await getDatabase();
 
+    // If filtering by following, get the list of users the current user follows
+    let followingUserIds: string[] = [];
+    if (following === "true" && userId) {
+      const { data: friendships } = await supabase
+        .from("friends")
+        .select("user_two_id")
+        .eq("user_one_id", userId)
+        .eq("status", "accepted");
+
+      followingUserIds = friendships?.map((f) => f.user_two_id) || [];
+
+      // If user follows no one, return empty array
+      if (followingUserIds.length === 0) {
+        return res.status(200).json({
+          message: "Posts retrieved successfully",
+          posts: [],
+          pagination: {
+            total: 0,
+            limit: Number(limit),
+            offset: Number(offset),
+            hasMore: false,
+          },
+        });
+      }
+    }
+
     // Get all posts with related data
-    const {
-      data: posts,
-      error,
-      count,
-    } = await supabase
+    let query = supabase
       .from("posts")
       .select(
         `
@@ -304,7 +326,18 @@ export const getAllPosts = async (req: AuthRequest, res: Response) => {
             `,
         { count: "exact" }
       )
-      .eq("visibility", visibility)
+      .eq("visibility", visibility);
+
+    // Filter by following users if requested
+    if (following === "true" && followingUserIds.length > 0) {
+      query = query.in("user_id", followingUserIds);
+    }
+
+    const {
+      data: posts,
+      error,
+      count,
+    } = await query
       .order("created_at", { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
