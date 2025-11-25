@@ -146,6 +146,17 @@ export class SpotifyAPI {
   async getAlbum(albumId: string) {
     return this.makeSpotifyRequest(`/albums/${albumId}`);
   }
+
+  // Get artist details by ID (includes genres)
+  async getArtist(artistId: string) {
+    return this.makeSpotifyRequest(`/artists/${artistId}`);
+  }
+
+  // Get multiple artists by IDs (includes genres)
+  async getArtists(artistIds: string[]) {
+    const ids = artistIds.slice(0, 50).join(','); // Spotify allows max 50 IDs
+    return this.makeSpotifyRequest(`/artists?ids=${ids}`);
+  }
 }
 
 // Create a singleton instance

@@ -1,9 +1,18 @@
 import { Fragment, useEffect, useState } from "react";
-import { Alert, ScrollView, Switch, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AlbumRankingModal } from "@/components/feed/AlbumRankingModal";
-import { AlbumSearchModal, SpotifyAlbumSearchResult } from "@/components/feed/AlbumSearchModal";
+import {
+  AlbumSearchModal,
+  SpotifyAlbumSearchResult,
+} from "@/components/feed/AlbumSearchModal";
 import { CreatePostForm } from "@/components/feed/CreatePostForm";
 import { FeedState } from "@/components/feed/FeedState";
 import { PostCard } from "@/components/feed/PostCard";
@@ -15,7 +24,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useSpotifyAPI } from "@/lib/spotify";
 import { feedStyles } from "@/styles/feedStyles";
-import { Comment, FeedPost, RankedSong, SelectedAlbum, SelectedSong, SpotifyAlbum, SpotifyTrack } from "@/types/feed";
+import {
+  Comment,
+  FeedPost,
+  RankedSong,
+  SelectedAlbum,
+  SelectedSong,
+  SpotifyAlbum,
+  SpotifyTrack,
+} from "@/types/feed";
 
 export default function FeedScreen() {
   const [feedData, setFeedData] = useState<FeedPost[]>([]);
@@ -23,7 +40,9 @@ export default function FeedScreen() {
   const [error, setError] = useState<string | null>(null);
   const [postContent, setPostContent] = useState("");
   const [selectedSong, setSelectedSong] = useState<SelectedSong | null>(null);
-  const [selectedAlbum, setSelectedAlbum] = useState<SelectedAlbum | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<SelectedAlbum | null>(
+    null
+  );
   const [isPosting, setIsPosting] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -31,12 +50,20 @@ export default function FeedScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [showAlbumSearchModal, setShowAlbumSearchModal] = useState(false);
   const [albumSearchQuery, setAlbumSearchQuery] = useState("");
-  const [albumSearchResults, setAlbumSearchResults] = useState<SpotifyAlbumSearchResult[]>([]);
+  const [albumSearchResults, setAlbumSearchResults] = useState<
+    SpotifyAlbumSearchResult[]
+  >([]);
   const [isAlbumSearching, setIsAlbumSearching] = useState(false);
   const [showAlbumRankingModal, setShowAlbumRankingModal] = useState(false);
-  const [selectedAlbumForRanking, setSelectedAlbumForRanking] = useState<SpotifyAlbum | null>(null);
+  const [selectedAlbumForRanking, setSelectedAlbumForRanking] =
+    useState<SpotifyAlbum | null>(null);
   const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
   const [showFollowingOnly, setShowFollowingOnly] = useState(false);
+  const [postGenres, setPostGenres] = useState<Map<number, string[]>>(
+    new Map()
+  );
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const mutedColor = useThemeColor({}, "textMuted");
   const primaryColor = useThemeColor({}, "primary");
   const textColor = useThemeColor({}, "text");
@@ -101,11 +128,76 @@ export default function FeedScreen() {
       );
 
       setFeedData(postsWithComments);
+
+      // Fetch genres for posts with songs
+      fetchGenresForPosts(postsWithComments);
     } catch (err) {
       console.error("Error fetching posts:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch posts");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGenresForPosts = async (posts: FeedPost[]) => {
+    try {
+      const genresMap = new Map<number, string[]>();
+      const allGenres = new Set<string>();
+
+      // Fetch genres for each post with a song
+      await Promise.all(
+        posts.map(async (post) => {
+          if (post.songs?.spotify_id) {
+            try {
+              // Get track details to get artist IDs
+              const track = await spotifyAPI.getTrack(post.songs.spotify_id);
+
+              if (track.artists && track.artists.length > 0) {
+                // Get artist details for genres
+                const artistIds = track.artists.map((a: any) => a.id);
+                const artistsData = await spotifyAPI.getArtists(artistIds);
+
+                // Collect all genres from all artists
+                const genres: string[] = [];
+                artistsData.artists?.forEach((artist: any) => {
+                  if (artist.genres && artist.genres.length > 0) {
+                    genres.push(...artist.genres);
+                  }
+                });
+
+                if (genres.length > 0) {
+                  genresMap.set(post.post_id, genres);
+                  genres.forEach((g) => allGenres.add(g));
+                }
+              }
+            } catch (error) {
+              console.error(
+                `Error fetching genres for post ${post.post_id}:`,
+                error
+              );
+            }
+          }
+        })
+      );
+
+      setPostGenres(genresMap);
+
+      // Sort genres by frequency and take top 10
+      const genreFrequency = new Map<string, number>();
+      genresMap.forEach((genres) => {
+        genres.forEach((genre) => {
+          genreFrequency.set(genre, (genreFrequency.get(genre) || 0) + 1);
+        });
+      });
+
+      const sortedGenres = Array.from(genreFrequency.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([genre]) => genre);
+
+      setAvailableGenres(sortedGenres);
+    } catch (error) {
+      console.error("Error fetching genres:", error);
     }
   };
 
@@ -169,9 +261,9 @@ export default function FeedScreen() {
       } else if (selectedAlbum) {
         // Get the top-ranked song (rank 1) for the main song display
         const topRankedSong = selectedAlbum.rankedSongs
-          .filter(song => song.rank > 0)
+          .filter((song) => song.rank > 0)
           .sort((a, b) => a.rank - b.rank)[0];
-        
+
         if (!topRankedSong) {
           Alert.alert("Error", "Please rank at least one song from the album");
           setIsPosting(false);
@@ -183,9 +275,9 @@ export default function FeedScreen() {
         // Send album ID and full rankings for storage
         requestBody.albumId = selectedAlbum.spotifyId;
         requestBody.albumRankings = selectedAlbum.rankedSongs
-          .filter(song => song.rank > 0)
+          .filter((song) => song.rank > 0)
           .sort((a, b) => a.rank - b.rank)
-          .map(song => ({
+          .map((song) => ({
             spotifyId: song.spotifyId,
             rank: song.rank,
           }));
@@ -296,7 +388,7 @@ export default function FeedScreen() {
     try {
       setIsLoadingAlbum(true);
       setShowAlbumSearchModal(false);
-      
+
       // Fetch full album details including tracks
       const albumData = await spotifyAPI.getAlbum(album.id);
       setSelectedAlbumForRanking(albumData);
@@ -315,7 +407,7 @@ export default function FeedScreen() {
     setSelectedAlbum({
       spotifyId: selectedAlbumForRanking.id,
       name: selectedAlbumForRanking.name,
-      artist: selectedAlbumForRanking.artists.map(a => a.name).join(", "),
+      artist: selectedAlbumForRanking.artists.map((a) => a.name).join(", "),
       coverArtUrl: selectedAlbumForRanking.images[0]?.url || "",
       rankedSongs,
     });
@@ -354,33 +446,6 @@ export default function FeedScreen() {
           </ThemedText>
         </View>
 
-        {/* Feed Filter Toggle */}
-        {user && token && (
-          <View style={[feedStyles.feedContainer, { paddingVertical: 12 }]}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                backgroundColor: surfaceColor,
-                borderRadius: 12,
-              }}
-            >
-              <ThemedText style={{ fontSize: 16, color: textColor }}>
-                Show only posts from people I follow
-              </ThemedText>
-              <Switch
-                value={showFollowingOnly}
-                onValueChange={setShowFollowingOnly}
-                trackColor={{ false: mutedColor + "40", true: primaryColor + "80" }}
-                thumbColor={showFollowingOnly ? primaryColor : "#f4f3f4"}
-              />
-            </View>
-          </View>
-        )}
-
         {/* Create Post Section */}
         <View style={feedStyles.feedContainer}>
           <CreatePostForm
@@ -402,6 +467,99 @@ export default function FeedScreen() {
             accentColor={accentColor}
           />
         </View>
+        {/* Feed Filter Toggle */}
+        {user && token && (
+          <View style={[feedStyles.feedContainer, { paddingVertical: 12 }]}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                backgroundColor: surfaceColor,
+                borderRadius: 15,
+              }}
+            >
+              <ThemedText style={{ fontSize: 16, color: textColor }}>
+                From my Followings
+              </ThemedText>
+              <Switch
+                value={showFollowingOnly}
+                onValueChange={setShowFollowingOnly}
+                trackColor={{
+                  false: mutedColor + "40",
+                  true: primaryColor + "80",
+                }}
+                thumbColor={showFollowingOnly ? primaryColor : "#f4f3f4"}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Genre Filter Pills */}
+        {availableGenres.length > 0 && (
+          <View style={[feedStyles.feedContainer, { paddingVertical: 8 }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+            >
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor:
+                    selectedGenre === null ? primaryColor : surfaceColor,
+                  borderWidth: 1,
+                  borderColor:
+                    selectedGenre === null ? primaryColor : borderColor,
+                }}
+                onPress={() => setSelectedGenre(null)}
+                activeOpacity={0.7}
+              >
+                <ThemedText
+                  style={{
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: selectedGenre === null ? "#fff" : textColor,
+                  }}
+                >
+                  All
+                </ThemedText>
+              </TouchableOpacity>
+              {availableGenres.map((genre) => (
+                <TouchableOpacity
+                  key={genre}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor:
+                      selectedGenre === genre ? primaryColor : surfaceColor,
+                    borderWidth: 1,
+                    borderColor:
+                      selectedGenre === genre ? primaryColor : borderColor,
+                  }}
+                  onPress={() => setSelectedGenre(genre)}
+                  activeOpacity={0.7}
+                >
+                  <ThemedText
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: selectedGenre === genre ? "#fff" : textColor,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {genre}
+                  </ThemedText>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         <View style={feedStyles.feedContainer}>
           <FeedState
@@ -415,37 +573,69 @@ export default function FeedScreen() {
 
           {!loading && !error && feedData.length > 0 && (
             <>
-              {feedData.map((post, index) => (
-                <Fragment key={post.post_id}>
-                  <PostCard
-                    post={post}
-                    onLike={handleLike}
-                    onComment={handleComment}
-                    onCommentAdded={handleCommentAdded}
-                    surfaceColor={surfaceColor}
-                    mutedColor={mutedColor}
-                    primaryColor={primaryColor}
-                    textColor={textColor}
-                    borderColor={borderColor}
-                    authToken={token || undefined}
-                  />
+              {feedData
+                .filter((post) => {
+                  // If no genre is selected, show all posts
+                  if (!selectedGenre) return true;
 
-                  {index < feedData.length - 1 && (
-                    <View
-                      style={{
-                        height: 2,
-                        width: "95%",
-                        backgroundColor: mutedColor + "20", // subtle opacity
-                        marginVertical: 10,
-                        borderRadius: 4,
-                        alignSelf: "center",
-                      }}
+                  // Filter by selected genre
+                  const genres = postGenres.get(post.post_id);
+                  return genres?.includes(selectedGenre) || false;
+                })
+                .map((post, index, filteredArray) => (
+                  <Fragment key={post.post_id}>
+                    <PostCard
+                      post={post}
+                      onLike={handleLike}
+                      onComment={handleComment}
+                      onCommentAdded={handleCommentAdded}
+                      surfaceColor={surfaceColor}
+                      mutedColor={mutedColor}
+                      primaryColor={primaryColor}
+                      textColor={textColor}
+                      borderColor={borderColor}
+                      authToken={token || undefined}
                     />
-                  )}
-                </Fragment>
-              ))}
+
+                    {index < filteredArray.length - 1 && (
+                      <View
+                        style={{
+                          height: 2,
+                          width: "95%",
+                          backgroundColor: mutedColor + "20", // subtle opacity
+                          marginVertical: 10,
+                          borderRadius: 4,
+                          alignSelf: "center",
+                        }}
+                      />
+                    )}
+                  </Fragment>
+                ))}
             </>
           )}
+
+          {/* Show empty state when genre filter has no results */}
+          {!loading &&
+            !error &&
+            feedData.length > 0 &&
+            selectedGenre &&
+            feedData.filter((post) =>
+              postGenres.get(post.post_id)?.includes(selectedGenre)
+            ).length === 0 && (
+              <View style={feedStyles.emptyState}>
+                <ThemedText
+                  style={[feedStyles.emptyStateTitle, { color: textColor }]}
+                >
+                  No posts found
+                </ThemedText>
+                <ThemedText
+                  style={[feedStyles.emptyStateText, { color: mutedColor }]}
+                >
+                  No posts match the selected genre. Try selecting a different
+                  genre.
+                </ThemedText>
+              </View>
+            )}
         </View>
       </ScrollView>
 
