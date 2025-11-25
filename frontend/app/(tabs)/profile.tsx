@@ -636,14 +636,14 @@ export default function ProfileScreen() {
           {/* Minimal Stats Row */}
           <View style={styles.statsRow}>
             <TouchableOpacity
-              style={styles.statItem}
+              style={[styles.statItem, { marginLeft: -25 }]}
               onPress={() => user?.id && router.push(`/followers?userId=${user.id}` as any)}
             >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowers}</ThemedText>
               <ThemedText style={[styles.statLabel, { color: mutedColor }]}>Followers</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.statItem}
+              style={[styles.statItem, { marginLeft: -7 }]}
               onPress={() => user?.id && router.push(`/following?userId=${user.id}` as any)}
             >
               <ThemedText style={styles.statValue}>{profileStats.totalFollowing}</ThemedText>
