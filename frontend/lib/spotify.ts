@@ -111,6 +111,11 @@ export class SpotifyAPI {
     return this.makeSpotifyRequest(`/search?q=${encodedQuery}&type=${type}&limit=${limit}`);
   }
 
+  // Get track details
+  async getTrack(trackId: string) {
+    return this.makeSpotifyRequest(`/tracks/${trackId}`);
+  }
+
   // Get track audio features
   async getTrackAudioFeatures(trackId: string) {
     return this.makeSpotifyRequest(`/audio-features/${trackId}`);
@@ -135,6 +140,11 @@ export class SpotifyAPI {
     });
 
     return this.makeSpotifyRequest(`/recommendations?${queryParams.toString()}`);
+  }
+
+  // Get album details by ID
+  async getAlbum(albumId: string) {
+    return this.makeSpotifyRequest(`/albums/${albumId}`);
   }
 }
 

@@ -33,7 +33,7 @@ export function CommentsList({ comments, mutedColor }: CommentsListProps) {
         <View key={comment.id} style={styles.commentItem}>
           <View style={styles.commentHeader}>
             <IconSymbol
-              name="person.circle.fill"
+              name="circle.fill"
               size={24}
               color={mutedColor}
             />

@@ -2,12 +2,12 @@ import { StyleSheet } from "react-native";
 
 export const postCardStyles = StyleSheet.create({
   postContainer: {
-    borderRadius: 24,
-    padding: 10,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 20,
+    padding: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   avatarPlaceholder: {
     width: 56,

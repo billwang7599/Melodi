@@ -13,9 +13,9 @@ import {
   View,
 } from 'react-native';
 
+import { ThemeToggle } from '@/components/theme-toggle';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { API } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -169,7 +169,7 @@ export default function EditProfileScreen() {
           <View style={styles.section}>
             <View style={styles.avatarSection}>
               <View style={[styles.avatar, { borderColor: primaryColor }]}>
-                <IconSymbol name="person.circle.fill" size={48} color={primaryColor} />
+                <IconSymbol name="circle.fill" size={48} color={primaryColor} />
               </View>
               <TouchableOpacity style={styles.changePhotoButton}>
                 <ThemedText style={[styles.changePhotoText, { color: primaryColor }]}>

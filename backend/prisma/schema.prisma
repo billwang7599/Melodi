@@ -43,14 +43,16 @@ model Post {
   postId      Int            @id @default(autoincrement()) @map("post_id")
   user_id     String         @db.Uuid
   content     String
-  top_song_id BigInt
+  top_song_id BigInt?
+  album_id    String?        @map("album_id")
   likeCount   Int            @default(0) @map("like_count")
   visibility  PostVisibility @default(public)
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
   likes       Like[]
-  songs       Song           @relation(fields: [top_song_id], references: [songId])
+  songs       Song?          @relation(fields: [top_song_id], references: [songId])
   users       User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  albumRankings AlbumRanking[]
 
   @@map("posts")
 }
@@ -88,6 +90,18 @@ enum FriendshipStatus {
   pending
   accepted
   blocked
+}
+
+model AlbumRanking {
+  id          BigInt   @id @default(autoincrement())
+  post_id    Int      @map("post_id")
+  spotify_id String   @map("spotify_id")
+  rank       Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  posts      Post     @relation(fields: [post_id], references: [postId], onDelete: Cascade)
+
+  @@unique([post_id, rank])
+  @@map("album_rankings")
 }
 
 enum PostVisibility {

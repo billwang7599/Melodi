@@ -6,7 +6,7 @@ import { createOrGetSong } from "./songsController";
 // Create a new post
 export const createPost = async (req: AuthRequest, res: Response) => {
   try {
-    const { content, spotifyId, visibility = "public" } = req.body;
+    const { content, spotifyId, albumId, albumRankings, visibility = "public" } = req.body;
     const userId = req.userId; // Get user ID from authenticated request
 
     // Validate required fields
@@ -16,9 +16,10 @@ export const createPost = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!spotifyId) {
+    // Must have either spotifyId (for single song) or albumId (for album ranking)
+    if (!spotifyId && !albumId) {
       return res.status(400).json({
-        message: "Spotify ID is required",
+        message: "Either Spotify ID (for song) or Album ID (for album ranking) is required",
       });
     }
 
@@ -35,8 +36,33 @@ export const createPost = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Create or get existing song
-    const song = await createOrGetSong(spotifyId, supabase);
+    let topSongId: bigint | null = null;
+    let postAlbumId: string | null = null;
+
+    // Handle single song post
+    if (spotifyId) {
+      const song = await createOrGetSong(spotifyId, supabase);
+      topSongId = song.song_id;
+    }
+
+    // Handle album ranking post
+    if (albumId) {
+      postAlbumId = albumId;
+      
+      // Validate album rankings
+      if (!albumRankings || !Array.isArray(albumRankings) || albumRankings.length === 0) {
+        return res.status(400).json({
+          message: "Album rankings are required when posting an album",
+        });
+      }
+
+      // Ensure we have a top song from the rankings (use rank 1)
+      const topRankedSong = albumRankings.find((r: any) => r.rank === 1);
+      if (topRankedSong) {
+        const song = await createOrGetSong(topRankedSong.spotifyId, supabase);
+        topSongId = song.song_id;
+      }
+    }
 
     // Create the post
     const { data: newPost, error } = await supabase
@@ -45,7 +71,8 @@ export const createPost = async (req: AuthRequest, res: Response) => {
         {
           user_id: userId,
           content,
-          top_song_id: song.song_id,
+          top_song_id: topSongId,
+          album_id: postAlbumId,
           visibility,
           like_count: 0,
           created_at: new Date().toISOString(),
@@ -58,6 +85,7 @@ export const createPost = async (req: AuthRequest, res: Response) => {
                 user_id,
                 content,
                 top_song_id,
+                album_id,
                 like_count,
                 visibility,
                 created_at,
@@ -84,9 +112,43 @@ export const createPost = async (req: AuthRequest, res: Response) => {
       throw error;
     }
 
+    // Create album rankings if provided
+    if (albumRankings && albumRankings.length > 0 && newPost.post_id) {
+      const rankingInserts = albumRankings.map((ranking: any) => ({
+        post_id: newPost.post_id,
+        spotify_id: ranking.spotifyId,
+        rank: ranking.rank,
+        created_at: new Date().toISOString(),
+      }));
+
+      const { error: rankingError } = await supabase
+        .from("album_rankings")
+        .insert(rankingInserts);
+
+      if (rankingError) {
+        console.error("Error creating album rankings:", rankingError);
+        // Don't fail the post creation, but log the error
+      }
+    }
+
+    // Fetch the post with album rankings if it's an album post
+    let postWithRankings: any = newPost;
+    if (postAlbumId) {
+      const { data: rankings } = await supabase
+        .from("album_rankings")
+        .select("*")
+        .eq("post_id", newPost.post_id)
+        .order("rank", { ascending: true });
+
+      postWithRankings = {
+        ...newPost,
+        albumRankings: rankings || [],
+      };
+    }
+
     res.status(201).json({
       message: "Post created successfully",
-      post: newPost,
+      post: postWithRankings,
     });
   } catch (error) {
     console.error("Error in createPost:", error);
@@ -133,6 +195,7 @@ export const getPostsByUserId = async (req: Request, res: Response) => {
                 user_id,
                 content,
                 top_song_id,
+                album_id,
                 like_count,
                 visibility,
                 created_at,
@@ -162,9 +225,24 @@ export const getPostsByUserId = async (req: Request, res: Response) => {
       throw error;
     }
 
+    // Fetch album rankings for posts that have album_id
+    const postsWithRankings = await Promise.all(
+      (posts || []).map(async (post: any) => {
+        if (post.album_id) {
+          const { data: rankings } = await supabase
+            .from("album_rankings")
+            .select("*")
+            .eq("post_id", post.post_id)
+            .order("rank", { ascending: true });
+          return { ...post, albumRankings: rankings || [] };
+        }
+        return post;
+      })
+    );
+
     res.status(200).json({
       message: "Posts retrieved successfully",
-      posts: posts || [],
+      posts: postsWithRankings,
       pagination: {
         total: count || 0,
         limit: Number(limit),
@@ -202,6 +280,7 @@ export const getAllPosts = async (req: AuthRequest, res: Response) => {
                 user_id,
                 content,
                 top_song_id,
+                album_id,
                 like_count,
                 visibility,
                 created_at,
@@ -234,9 +313,25 @@ export const getAllPosts = async (req: AuthRequest, res: Response) => {
       throw error;
     }
 
+    // Fetch album rankings for posts that have album_id
+    const postsWithRankings = await Promise.all(
+      (posts || []).map(async (post: any) => {
+        let albumRankings = [];
+        if (post.album_id) {
+          const { data: rankings } = await supabase
+            .from("album_rankings")
+            .select("*")
+            .eq("post_id", post.post_id)
+            .order("rank", { ascending: true });
+          albumRankings = rankings || [];
+        }
+        return { ...post, albumRankings };
+      })
+    );
+
     // Process posts to add isLiked field for the current user
     const processedPosts =
-      posts?.map((post) => ({
+      postsWithRankings?.map((post) => ({
         ...post,
         isLiked: userId
           ? post.likes?.some((like: any) => like.user_id === userId)

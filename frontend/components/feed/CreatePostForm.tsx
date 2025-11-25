@@ -2,20 +2,23 @@ import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { createPostStyles } from "@/styles/createPostStyles";
-import { SelectedSong } from "@/types/feed";
+import { SelectedAlbum, SelectedSong } from "@/types/feed";
 import {
-  ActivityIndicator,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 interface CreatePostFormProps {
   postContent: string;
   setPostContent: (content: string) => void;
   selectedSong: SelectedSong | null;
+  selectedAlbum: SelectedAlbum | null;
   onSelectSong: () => void;
+  onSelectAlbum: () => void;
   onRemoveSong: () => void;
+  onRemoveAlbum: () => void;
   onCreatePost: () => void;
   isPosting: boolean;
   mutedColor: string;
@@ -30,8 +33,11 @@ export function CreatePostForm({
   postContent,
   setPostContent,
   selectedSong,
+  selectedAlbum,
   onSelectSong,
+  onSelectAlbum,
   onRemoveSong,
+  onRemoveAlbum,
   onCreatePost,
   isPosting,
   mutedColor,
@@ -80,21 +86,67 @@ export function CreatePostForm({
             <IconSymbol name="xmark.circle.fill" size={22} color={mutedColor} />
           </TouchableOpacity>
         </View>
-      ) : (
-        <TouchableOpacity
+      ) : selectedAlbum ? (
+        <View
           style={[
-            createPostStyles.selectSongButton,
+            createPostStyles.selectedSongContainer,
             { backgroundColor: accentColor },
           ]}
-          onPress={onSelectSong}
         >
-          <IconSymbol name="music.note" size={20} color={textColor} />
-          <ThemedText
-            style={[createPostStyles.selectSongText, { color: textColor }]}
+          <View style={createPostStyles.songInfoRow}>
+            <IconSymbol name="square.stack" size={18} color={primaryColor} />
+            <View style={createPostStyles.songTextContainer}>
+              <ThemedText style={createPostStyles.selectedSongName}>
+                {selectedAlbum.name}
+              </ThemedText>
+              <ThemedText
+                style={[
+                  createPostStyles.selectedSongArtist,
+                  { color: mutedColor },
+                ]}
+              >
+                {selectedAlbum.artist} • {selectedAlbum.rankedSongs.length} songs ranked
+              </ThemedText>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={onRemoveAlbum}
+            style={createPostStyles.removeButton}
           >
-            Select a song
-          </ThemedText>
-        </TouchableOpacity>
+            <IconSymbol name="xmark.circle.fill" size={22} color={mutedColor} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={{ gap: 10 }}>
+          <TouchableOpacity
+            style={[
+              createPostStyles.selectSongButton,
+              { backgroundColor: accentColor },
+            ]}
+            onPress={onSelectSong}
+          >
+            <IconSymbol name="music.note" size={20} color={textColor} />
+            <ThemedText
+              style={[createPostStyles.selectSongText, { color: textColor }]}
+            >
+              Select a song
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              createPostStyles.selectSongButton,
+              { backgroundColor: accentColor },
+            ]}
+            onPress={onSelectAlbum}
+          >
+            <IconSymbol name="square.stack" size={20} color={textColor} />
+            <ThemedText
+              style={[createPostStyles.selectSongText, { color: textColor }]}
+            >
+              Rank an album
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       )}
 
       <TextInput
@@ -120,10 +172,10 @@ export function CreatePostForm({
           style={[
             createPostStyles.postButton,
             { backgroundColor: primaryColor },
-            (!selectedSong || isPosting) && createPostStyles.postButtonDisabled,
+            ((!selectedSong && !selectedAlbum) || isPosting) && createPostStyles.postButtonDisabled,
           ]}
           onPress={onCreatePost}
-          disabled={!selectedSong || isPosting}
+          disabled={(!selectedSong && !selectedAlbum) || isPosting}
         >
           {isPosting ? (
             <ActivityIndicator size="small" color="white" />

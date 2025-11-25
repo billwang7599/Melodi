@@ -1,7 +1,9 @@
-import { useEffect, useState, Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AlbumRankingModal } from "@/components/feed/AlbumRankingModal";
+import { AlbumSearchModal, SpotifyAlbumSearchResult } from "@/components/feed/AlbumSearchModal";
 import { CreatePostForm } from "@/components/feed/CreatePostForm";
 import { FeedState } from "@/components/feed/FeedState";
 import { PostCard } from "@/components/feed/PostCard";
@@ -13,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useSpotifyAPI } from "@/lib/spotify";
 import { feedStyles } from "@/styles/feedStyles";
-import { Comment, FeedPost, SelectedSong, SpotifyTrack } from "@/types/feed";
+import { Comment, FeedPost, RankedSong, SelectedAlbum, SelectedSong, SpotifyAlbum, SpotifyTrack } from "@/types/feed";
 
 export default function FeedScreen() {
   const [feedData, setFeedData] = useState<FeedPost[]>([]);
@@ -21,11 +23,19 @@ export default function FeedScreen() {
   const [error, setError] = useState<string | null>(null);
   const [postContent, setPostContent] = useState("");
   const [selectedSong, setSelectedSong] = useState<SelectedSong | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<SelectedAlbum | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showAlbumSearchModal, setShowAlbumSearchModal] = useState(false);
+  const [albumSearchQuery, setAlbumSearchQuery] = useState("");
+  const [albumSearchResults, setAlbumSearchResults] = useState<SpotifyAlbumSearchResult[]>([]);
+  const [isAlbumSearching, setIsAlbumSearching] = useState(false);
+  const [showAlbumRankingModal, setShowAlbumRankingModal] = useState(false);
+  const [selectedAlbumForRanking, setSelectedAlbumForRanking] = useState<SpotifyAlbum | null>(null);
+  const [isLoadingAlbum, setIsLoadingAlbum] = useState(false);
   const mutedColor = useThemeColor({}, "textMuted");
   const primaryColor = useThemeColor({}, "primary");
   const textColor = useThemeColor({}, "text");
@@ -135,13 +145,45 @@ export default function FeedScreen() {
       return;
     }
 
-    if (!selectedSong) {
-      Alert.alert("Error", "Please select a song for your post");
+    if (!selectedSong && !selectedAlbum) {
+      Alert.alert("Error", "Please select a song or album for your post");
       return;
     }
 
     try {
       setIsPosting(true);
+
+      const requestBody: any = {
+        content: postContent.trim() || "",
+        visibility: "public",
+      };
+
+      if (selectedSong) {
+        requestBody.spotifyId = selectedSong.spotifyId;
+      } else if (selectedAlbum) {
+        // Get the top-ranked song (rank 1) for the main song display
+        const topRankedSong = selectedAlbum.rankedSongs
+          .filter(song => song.rank > 0)
+          .sort((a, b) => a.rank - b.rank)[0];
+        
+        if (!topRankedSong) {
+          Alert.alert("Error", "Please rank at least one song from the album");
+          setIsPosting(false);
+          return;
+        }
+
+        // Send top-ranked song's spotifyId for main song display
+        requestBody.spotifyId = topRankedSong.spotifyId;
+        // Send album ID and full rankings for storage
+        requestBody.albumId = selectedAlbum.spotifyId;
+        requestBody.albumRankings = selectedAlbum.rankedSongs
+          .filter(song => song.rank > 0)
+          .sort((a, b) => a.rank - b.rank)
+          .map(song => ({
+            spotifyId: song.spotifyId,
+            rank: song.rank,
+          }));
+      }
 
       const response = await fetch(`${API.BACKEND_URL}/api/posts`, {
         method: "POST",
@@ -150,11 +192,7 @@ export default function FeedScreen() {
           Authorization: `Bearer ${token}`,
           "ngrok-skip-browser-warning": "true",
         },
-        body: JSON.stringify({
-          content: postContent.trim() || "",
-          spotifyId: selectedSong.spotifyId,
-          visibility: "public",
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -170,6 +208,7 @@ export default function FeedScreen() {
       // Clear form
       setPostContent("");
       setSelectedSong(null);
+      setSelectedAlbum(null);
 
       // Refresh feed
       await fetchPosts();
@@ -225,6 +264,71 @@ export default function FeedScreen() {
     setSearchResults([]);
   };
 
+  const handleSelectAlbum = () => {
+    setShowAlbumSearchModal(true);
+  };
+
+  const handleAlbumSearch = async (query: string) => {
+    if (!query.trim()) {
+      setAlbumSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsAlbumSearching(true);
+      const response = await spotifyAPI.search(query, "album", 20);
+      setAlbumSearchResults(response.albums.items);
+    } catch (error) {
+      console.error("Error searching albums:", error);
+      Alert.alert("Error", "Failed to search for albums. Please try again.");
+    } finally {
+      setIsAlbumSearching(false);
+    }
+  };
+
+  const handleAlbumSelect = async (album: SpotifyAlbumSearchResult) => {
+    try {
+      setIsLoadingAlbum(true);
+      setShowAlbumSearchModal(false);
+      
+      // Fetch full album details including tracks
+      const albumData = await spotifyAPI.getAlbum(album.id);
+      setSelectedAlbumForRanking(albumData);
+      setShowAlbumRankingModal(true);
+    } catch (error) {
+      console.error("Error fetching album:", error);
+      Alert.alert("Error", "Failed to load album. Please try again.");
+    } finally {
+      setIsLoadingAlbum(false);
+    }
+  };
+
+  const handleAlbumRankingConfirm = (rankedSongs: RankedSong[]) => {
+    if (!selectedAlbumForRanking) return;
+
+    setSelectedAlbum({
+      spotifyId: selectedAlbumForRanking.id,
+      name: selectedAlbumForRanking.name,
+      artist: selectedAlbumForRanking.artists.map(a => a.name).join(", "),
+      coverArtUrl: selectedAlbumForRanking.images[0]?.url || "",
+      rankedSongs,
+    });
+
+    setShowAlbumRankingModal(false);
+    setSelectedAlbumForRanking(null);
+  };
+
+  const handleCloseAlbumSearchModal = () => {
+    setShowAlbumSearchModal(false);
+    setAlbumSearchQuery("");
+    setAlbumSearchResults([]);
+  };
+
+  const handleCloseAlbumRankingModal = () => {
+    setShowAlbumRankingModal(false);
+    setSelectedAlbumForRanking(null);
+  };
+
   return (
     <ThemedView style={feedStyles.container}>
       <ScrollView
@@ -250,8 +354,11 @@ export default function FeedScreen() {
             postContent={postContent}
             setPostContent={setPostContent}
             selectedSong={selectedSong}
+            selectedAlbum={selectedAlbum}
             onSelectSong={handleSelectSong}
+            onSelectAlbum={handleSelectAlbum}
             onRemoveSong={() => setSelectedSong(null)}
+            onRemoveAlbum={() => setSelectedAlbum(null)}
             onCreatePost={handleCreatePost}
             isPosting={isPosting}
             mutedColor={mutedColor}
@@ -323,6 +430,38 @@ export default function FeedScreen() {
         onClose={handleCloseSearchModal}
         mutedColor={mutedColor}
         primaryColor={primaryColor}
+        insets={insets}
+      />
+
+      {/* Album Search Modal */}
+      <AlbumSearchModal
+        visible={showAlbumSearchModal}
+        searchQuery={albumSearchQuery}
+        setSearchQuery={(text) => {
+          setAlbumSearchQuery(text);
+          handleAlbumSearch(text);
+        }}
+        searchResults={albumSearchResults}
+        isSearching={isAlbumSearching}
+        onAlbumSelect={handleAlbumSelect}
+        onClose={handleCloseAlbumSearchModal}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        insets={insets}
+      />
+
+      {/* Album Ranking Modal */}
+      <AlbumRankingModal
+        visible={showAlbumRankingModal}
+        album={selectedAlbumForRanking}
+        isLoading={isLoadingAlbum}
+        onConfirm={handleAlbumRankingConfirm}
+        onClose={handleCloseAlbumRankingModal}
+        mutedColor={mutedColor}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        surfaceColor={surfaceColor}
+        borderColor={borderColor}
         insets={insets}
       />
     </ThemedView>

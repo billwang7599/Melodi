@@ -3,10 +3,12 @@ import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { API } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useSpotifyAPI } from "@/lib/spotify";
 import { postCardStyles } from "@/styles/postCardStyles";
-import { Comment, FeedPost } from "@/types/feed";
-import { useState } from "react";
-import { Alert, TouchableOpacity, View } from "react-native";
+import { AlbumRanking, Comment, FeedPost } from "@/types/feed";
+import { Image } from "expo-image";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { CommentInput } from "./CommentInput";
 import { CommentsList } from "./CommentsList";
 
@@ -28,6 +30,7 @@ export function PostCard({
   onLike,
   onComment,
   onCommentAdded,
+  surfaceColor,
   mutedColor,
   primaryColor,
   textColor,
@@ -160,6 +163,162 @@ export function PostCard({
 
   const shadowColor = useThemeColor({}, "shadow");
   const accentColor = useThemeColor({}, "accent");
+  const spotifyAPI = useSpotifyAPI();
+  const [rankedSongsData, setRankedSongsData] = useState<Array<{ spotifyId: string; name: string; artist: string; rank: number; albumCoverUrl: string }>>([]);
+  const [isLoadingRankings, setIsLoadingRankings] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [albumCoverUrl, setAlbumCoverUrl] = useState<string>("");
+  const isAlbumPost = !!post.album_id && post.albumRankings && post.albumRankings.length > 0;
+
+  // Fetch song details for album rankings
+  useEffect(() => {
+    if (isAlbumPost && post.albumRankings) {
+      const fetchRankedSongs = async () => {
+        setIsLoadingRankings(true);
+        try {
+          // First, get album info to get the cover art
+          let albumCover = "";
+          if (post.album_id) {
+            try {
+              const albumData = await spotifyAPI.getAlbum(post.album_id);
+              albumCover = albumData.images?.[0]?.url || albumData.images?.[1]?.url || "";
+              setAlbumCoverUrl(albumCover);
+            } catch (error) {
+              console.error("Error fetching album:", error);
+            }
+          }
+
+          const songsData = await Promise.all(
+            post.albumRankings!.map(async (ranking: AlbumRanking) => {
+              try {
+                const trackData = await spotifyAPI.getTrack(ranking.spotify_id);
+                // Use album cover from track if we don't have it from album
+                const coverUrl = albumCover || trackData.album?.images?.[0]?.url || trackData.album?.images?.[1]?.url || "";
+                if (!albumCover && coverUrl) {
+                  setAlbumCoverUrl(coverUrl);
+                }
+                return {
+                  spotifyId: ranking.spotify_id,
+                  name: trackData.name,
+                  artist: trackData.artists.map((a: any) => a.name).join(", "),
+                  rank: ranking.rank,
+                  albumCoverUrl: coverUrl,
+                };
+              } catch (error) {
+                console.error(`Error fetching track ${ranking.spotify_id}:`, error);
+                return {
+                  spotifyId: ranking.spotify_id,
+                  name: "Unknown",
+                  artist: "Unknown",
+                  rank: ranking.rank,
+                  albumCoverUrl: albumCover,
+                };
+              }
+            })
+          );
+          setRankedSongsData(songsData.sort((a, b) => a.rank - b.rank));
+        } catch (error) {
+          console.error("Error fetching ranked songs:", error);
+        } finally {
+          setIsLoadingRankings(false);
+        }
+      };
+      fetchRankedSongs();
+    }
+  }, [isAlbumPost, post.albumRankings, post.album_id, spotifyAPI]);
+
+  const rankingStyles = StyleSheet.create({
+    albumRankingContainer: {
+      borderRadius: 20,
+      padding: 24,
+      marginBottom: 20,
+      backgroundColor: surfaceColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    albumRankingHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 20,
+      gap: 12,
+    },
+    albumRankingTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      flex: 1,
+      letterSpacing: -0.3,
+    },
+    rankingList: {
+      gap: 8,
+    },
+    rankingItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      borderRadius: 16,
+      backgroundColor: "transparent",
+    },
+    rankBadge: {
+      width: 32,
+      alignItems: "flex-start",
+      justifyContent: "center",
+      marginRight: 16,
+    },
+    rankText: {
+      color: primaryColor,
+      fontSize: 18,
+      fontWeight: "700",
+      letterSpacing: -0.3,
+    },
+    albumCoverImage: {
+      width: 52,
+      height: 52,
+      borderRadius: 10,
+      marginRight: 14,
+      backgroundColor: mutedColor + "15",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    songInfo: {
+      flex: 1,
+    },
+    songName: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 3,
+      lineHeight: 22,
+      letterSpacing: -0.2,
+    },
+    songArtist: {
+      fontSize: 14,
+      color: mutedColor,
+      lineHeight: 20,
+      letterSpacing: -0.1,
+    },
+    expandButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: "transparent",
+    },
+    expandButtonText: {
+      fontSize: 15,
+      fontWeight: "600",
+      marginLeft: 8,
+      letterSpacing: -0.2,
+    },
+  });
+
+  const displayedSongs = isExpanded ? rankedSongsData : rankedSongsData.slice(0, 3);
+  const hasMoreSongs = rankedSongsData.length > 3;
 
   return (
     <View style={[postCardStyles.postContainer, { shadowColor }]}>
@@ -171,7 +330,6 @@ export function PostCard({
             { backgroundColor: accentColor },
           ]}
         >
-          <IconSymbol name="person.circle.fill" size={40} color={mutedColor} />
         </View>
         <View style={postCardStyles.headerTextContainer}>
           <ThemedText style={postCardStyles.timestamp}>
@@ -181,14 +339,93 @@ export function PostCard({
             <ThemedText style={postCardStyles.username}>
               @{post.users.username}
             </ThemedText>
-            {" is listening to"}
+            {isAlbumPost ? " ranked an album" : " is listening to"}
           </ThemedText>
         </View>
       </View>
 
-      {/* Song Card */}
+      {/* Album Ranking Display */}
+      {isAlbumPost && (
+        <View style={[rankingStyles.albumRankingContainer, { shadowColor }]}>
+          <View style={rankingStyles.albumRankingHeader}>
+            <ThemedText style={[rankingStyles.albumRankingTitle, { color: textColor }]}>
+              Album Ranking
+            </ThemedText>
+          </View>
+          {isLoadingRankings ? (
+            <View style={{ paddingVertical: 20, alignItems: "center" }}>
+              <ActivityIndicator size="small" color={primaryColor} />
+            </View>
+          ) : rankedSongsData.length > 0 ? (
+            <>
+              <View style={rankingStyles.rankingList}>
+                {displayedSongs.map((song, index) => {
+                  // Subtle background variation for visual separation without borders
+                  const itemBackground = index % 2 === 0 
+                    ? accentColor + "04" 
+                    : "transparent";
+                  
+                  return (
+                    <View 
+                      key={song.spotifyId} 
+                      style={[
+                        rankingStyles.rankingItem,
+                        { backgroundColor: itemBackground }
+                      ]}
+                    >
+                      <View style={rankingStyles.rankBadge}>
+                        <ThemedText style={rankingStyles.rankText}>
+                          {song.rank}
+                        </ThemedText>
+                      </View>
+                      {song.albumCoverUrl ? (
+                        <Image
+                          source={{ uri: song.albumCoverUrl }}
+                          style={rankingStyles.albumCoverImage}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View style={[rankingStyles.albumCoverImage, { backgroundColor: mutedColor + "15" }]} />
+                      )}
+                      <View style={rankingStyles.songInfo}>
+                        <ThemedText style={[rankingStyles.songName, { color: textColor }]} numberOfLines={1}>
+                          {song.name}
+                        </ThemedText>
+                        <ThemedText style={rankingStyles.songArtist} numberOfLines={1}>
+                          {song.artist}
+                        </ThemedText>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+              {hasMoreSongs && (
+                <TouchableOpacity
+                  style={rankingStyles.expandButton}
+                  onPress={() => setIsExpanded(!isExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol
+                    name={isExpanded ? "chevron.up" : "chevron.down"}
+                    size={18}
+                    color={mutedColor}
+                  />
+                  <ThemedText style={[rankingStyles.expandButtonText, { color: mutedColor }]}>
+                    {isExpanded ? "Show Less" : `View All ${rankedSongsData.length} Songs`}
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <ThemedText style={{ color: mutedColor, fontSize: 13, textAlign: "center", paddingVertical: 20 }}>
+              Loading rankings...
+            </ThemedText>
+          )}
+        </View>
+      )}
 
-      {post.songs.song_id && (
+      {/* Song Card */}
+      {post.songs?.song_id && !isAlbumPost && (
         <SpotifyEmbed trackId={post.songs.spotify_id || ""} />
       )}
       <ThemedText style={postCardStyles.description}>{post.content}</ThemedText>
