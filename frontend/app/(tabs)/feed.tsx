@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Fragment, useEffect, useState } from "react";
 import {
   Alert,
@@ -68,6 +69,8 @@ export default function FeedScreen() {
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [showSongRankingModal, setShowSongRankingModal] = useState(false);
   const [songScore, setSongScore] = useState<number | null>(null);
+  const [isSpotifyAuthenticated, setIsSpotifyAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const mutedColor = useThemeColor({}, "textMuted");
   const primaryColor = useThemeColor({}, "primary");
   const textColor = useThemeColor({}, "text");
@@ -205,6 +208,16 @@ export default function FeedScreen() {
       console.error("Error fetching genres:", error);
     }
   };
+
+  // Check Spotify authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const isAuth = await spotifyAPI.isAuthenticated();
+      setIsSpotifyAuthenticated(isAuth);
+      setIsCheckingAuth(false);
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     fetchPosts();
@@ -368,7 +381,22 @@ export default function FeedScreen() {
     await submitPost();
   };
 
-  const handleSelectSong = () => {
+  const handleSelectSong = async () => {
+    // Check if user is authenticated with Spotify
+    const isAuth = await spotifyAPI.isAuthenticated();
+    if (!isAuth) {
+      Alert.alert(
+        "Spotify Authentication Required",
+        "Please connect your Spotify account in your Profile to search for songs.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Profile", onPress: () => {
+            router.push("/(tabs)/profile");
+          }}
+        ]
+      );
+      return;
+    }
     setShowSearchModal(true);
   };
 
@@ -420,7 +448,22 @@ export default function FeedScreen() {
     setSearchResults([]);
   };
 
-  const handleSelectAlbum = () => {
+  const handleSelectAlbum = async () => {
+    // Check if user is authenticated with Spotify
+    const isAuth = await spotifyAPI.isAuthenticated();
+    if (!isAuth) {
+      Alert.alert(
+        "Spotify Authentication Required",
+        "Please connect your Spotify account in your Profile to search for albums.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Go to Profile", onPress: () => {
+            router.push("/(tabs)/profile");
+          }}
+        ]
+      );
+      return;
+    }
     setShowAlbumSearchModal(true);
   };
 

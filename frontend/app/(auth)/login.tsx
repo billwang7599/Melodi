@@ -61,7 +61,7 @@ export default function LoginScreen() {
       const result = await signIn(email, password);
 
       if (result.success) {
-        router.replace("/(tabs)/feed");
+        router.replace("/spotify-connect");
       } else {
         Alert.alert("Error", result.error || "Invalid credentials");
       }
