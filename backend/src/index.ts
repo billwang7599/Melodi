@@ -42,6 +42,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postsRoutes);
 app.use("/api/songs", songsRoutes);
+app.use("/api/save-songs", savedSongsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/analysis", analysisRoutes);
 app.use("/api/comments", commentsRoutes);
