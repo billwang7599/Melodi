@@ -23,8 +23,8 @@ import { ThemedView } from "@/components/themed-view";
 import { API } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { getSupabase } from "@/lib/supabase";
 import { useSpotifyAPI } from "@/lib/spotify";
+import { getSupabase } from "@/lib/supabase";
 import { feedStyles } from "@/styles/feedStyles";
 import {
   Comment,
@@ -91,6 +91,7 @@ export default function FeedScreen() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
+      console.log(API.BACKEND_URL);
       const url = new URL(`${API.BACKEND_URL}/api/posts`);
       if (showFollowingOnly && token) {
         url.searchParams.append("following", "true");
