@@ -8,7 +8,13 @@ import { postCardStyles } from "@/styles/postCardStyles";
 import { AlbumRanking, Comment, FeedPost } from "@/types/feed";
 import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { router } from "expo-router";
 import { CommentInput } from "./CommentInput";
 import { CommentsList } from "./CommentsList";
@@ -169,13 +175,22 @@ export function PostCard({
   const shadowColor = useThemeColor({}, "shadow");
   const accentColor = useThemeColor({}, "accent");
   const spotifyAPI = useSpotifyAPI();
-  const [rankedSongsData, setRankedSongsData] = useState<Array<{ spotifyId: string; name: string; artist: string; rank: number; albumCoverUrl: string }>>([]);
+  const [rankedSongsData, setRankedSongsData] = useState<
+    Array<{
+      spotifyId: string;
+      name: string;
+      artist: string;
+      rank: number;
+      albumCoverUrl: string;
+    }>
+  >([]);
   const [isLoadingRankings, setIsLoadingRankings] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [albumCoverUrl, setAlbumCoverUrl] = useState<string>("");
   const [albumName, setAlbumName] = useState<string>("");
   const [albumArtist, setAlbumArtist] = useState<string>("");
-  const isAlbumPost = !!post.album_id && post.albumRankings && post.albumRankings.length > 0;
+  const isAlbumPost =
+    !!post.album_id && post.albumRankings && post.albumRankings.length > 0;
 
   // Fetch song details for album rankings
   useEffect(() => {
@@ -188,10 +203,13 @@ export function PostCard({
           if (post.album_id) {
             try {
               const albumData = await spotifyAPI.getAlbum(post.album_id);
-              albumCover = albumData.images?.[0]?.url || albumData.images?.[1]?.url || "";
+              albumCover =
+                albumData.images?.[0]?.url || albumData.images?.[1]?.url || "";
               setAlbumCoverUrl(albumCover);
               setAlbumName(albumData.name || "");
-              setAlbumArtist(albumData.artists?.map((a: any) => a.name).join(", ") || "");
+              setAlbumArtist(
+                albumData.artists?.map((a: any) => a.name).join(", ") || ""
+              );
             } catch (error) {
               console.error("Error fetching album:", error);
             }
@@ -202,7 +220,11 @@ export function PostCard({
               try {
                 const trackData = await spotifyAPI.getTrack(ranking.spotify_id);
                 // Use album cover from track if we don't have it from album
-                const coverUrl = albumCover || trackData.album?.images?.[0]?.url || trackData.album?.images?.[1]?.url || "";
+                const coverUrl =
+                  albumCover ||
+                  trackData.album?.images?.[0]?.url ||
+                  trackData.album?.images?.[1]?.url ||
+                  "";
                 if (!albumCover && coverUrl) {
                   setAlbumCoverUrl(coverUrl);
                 }
@@ -214,7 +236,10 @@ export function PostCard({
                   albumCoverUrl: coverUrl,
                 };
               } catch (error) {
-                console.error(`Error fetching track ${ranking.spotify_id}:`, error);
+                console.error(
+                  `Error fetching track ${ranking.spotify_id}:`,
+                  error
+                );
                 return {
                   spotifyId: ranking.spotify_id,
                   name: "Unknown",
@@ -326,7 +351,9 @@ export function PostCard({
     },
   });
 
-  const displayedSongs = isExpanded ? rankedSongsData : rankedSongsData.slice(0, 3);
+  const displayedSongs = isExpanded
+    ? rankedSongsData
+    : rankedSongsData.slice(0, 3);
   const hasMoreSongs = rankedSongsData.length > 3;
 
   // Get score color based on rating category
@@ -349,13 +376,18 @@ export function PostCard({
           ]}
           onPress={handleUsernameClick}
           activeOpacity={0.7}
-        >
-        </TouchableOpacity>
+        ></TouchableOpacity>
         <View style={postCardStyles.headerTextContainer}>
           <ThemedText style={postCardStyles.timestamp}>
             {formatTimestamp(post.created_at)}
           </ThemedText>
-          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <TouchableOpacity onPress={handleUsernameClick} activeOpacity={0.7}>
               <ThemedText style={postCardStyles.username}>
                 @{post.users.username}
@@ -399,18 +431,39 @@ export function PostCard({
         <View style={[rankingStyles.albumRankingContainer, { shadowColor }]}>
           <View style={rankingStyles.albumRankingHeader}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={[rankingStyles.albumRankingTitle, { color: textColor }]}>
+              <ThemedText
+                style={[rankingStyles.albumRankingTitle, { color: textColor }]}
+              >
                 Album Ranking
               </ThemedText>
               {(albumName || albumArtist) && (
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, flexWrap: "wrap" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 4,
+                    flexWrap: "wrap",
+                  }}
+                >
                   {albumName && (
-                    <ThemedText style={{ fontSize: 16, fontWeight: "600", color: textColor }}>
+                    <ThemedText
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: textColor,
+                      }}
+                    >
                       {albumName}
                     </ThemedText>
                   )}
                   {albumName && albumArtist && (
-                    <ThemedText style={{ fontSize: 16, color: mutedColor, marginHorizontal: 6 }}>
+                    <ThemedText
+                      style={{
+                        fontSize: 16,
+                        color: mutedColor,
+                        marginHorizontal: 6,
+                      }}
+                    >
                       •
                     </ThemedText>
                   )}
@@ -432,16 +485,15 @@ export function PostCard({
               <View style={rankingStyles.rankingList}>
                 {displayedSongs.map((song, index) => {
                   // Subtle background variation for visual separation without borders
-                  const itemBackground = index % 2 === 0 
-                    ? accentColor + "04" 
-                    : "transparent";
-                  
+                  const itemBackground =
+                    index % 2 === 0 ? accentColor + "04" : "transparent";
+
                   return (
-                    <View 
-                      key={song.spotifyId} 
+                    <View
+                      key={song.spotifyId}
                       style={[
                         rankingStyles.rankingItem,
-                        { backgroundColor: itemBackground }
+                        { backgroundColor: itemBackground },
                       ]}
                     >
                       <View style={rankingStyles.rankBadge}>
@@ -456,13 +508,24 @@ export function PostCard({
                           contentFit="cover"
                         />
                       ) : (
-                        <View style={[rankingStyles.albumCoverImage, { backgroundColor: mutedColor + "15" }]} />
+                        <View
+                          style={[
+                            rankingStyles.albumCoverImage,
+                            { backgroundColor: mutedColor + "15" },
+                          ]}
+                        />
                       )}
                       <View style={rankingStyles.songInfo}>
-                        <ThemedText style={[rankingStyles.songName, { color: textColor }]} numberOfLines={1}>
+                        <ThemedText
+                          style={[rankingStyles.songName, { color: textColor }]}
+                          numberOfLines={1}
+                        >
                           {song.name}
                         </ThemedText>
-                        <ThemedText style={rankingStyles.songArtist} numberOfLines={1}>
+                        <ThemedText
+                          style={rankingStyles.songArtist}
+                          numberOfLines={1}
+                        >
                           {song.artist}
                         </ThemedText>
                       </View>
@@ -481,14 +544,28 @@ export function PostCard({
                     size={18}
                     color={mutedColor}
                   />
-                  <ThemedText style={[rankingStyles.expandButtonText, { color: mutedColor }]}>
-                    {isExpanded ? "Show Less" : `View All ${rankedSongsData.length} Songs`}
+                  <ThemedText
+                    style={[
+                      rankingStyles.expandButtonText,
+                      { color: mutedColor },
+                    ]}
+                  >
+                    {isExpanded
+                      ? "Show Less"
+                      : `View All ${rankedSongsData.length} Songs`}
                   </ThemedText>
                 </TouchableOpacity>
               )}
             </>
           ) : (
-            <ThemedText style={{ color: mutedColor, fontSize: 13, textAlign: "center", paddingVertical: 20 }}>
+            <ThemedText
+              style={{
+                color: mutedColor,
+                fontSize: 13,
+                textAlign: "center",
+                paddingVertical: 20,
+              }}
+            >
               Loading rankings...
             </ThemedText>
           )}
@@ -562,9 +639,9 @@ export function PostCard({
         </View>
 
         <View style={postCardStyles.rightActions}>
-          <TouchableOpacity style={postCardStyles.iconButton}>
+          {/* <TouchableOpacity style={postCardStyles.iconButton}>
             <IconSymbol name="bookmark" size={24} color={mutedColor} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
           <TouchableOpacity style={postCardStyles.iconButton}>
             <IconSymbol name="ellipsis" size={24} color={mutedColor} />
           </TouchableOpacity>

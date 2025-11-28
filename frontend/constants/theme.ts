@@ -88,7 +88,7 @@ export const API = {
   BACKEND_URL:
     process.env.EXPO_PUBLIC_API_URL ||
     // "https://samira-unavengeable-abrielle.ngrok-free.dev" ||
-    "https://82248bb0b3fc.ngrok-free.app",
+    "https://a93d51a532f0.ngrok-free.app",
 };
 
 export const SUPABASE = {
